@@ -28,9 +28,9 @@ const WAVE_MANAGER_PATH = path.join(PROJECT_ROOT, 'src', 'Track1_WaveSystem', 'W
 const TOWER_CONTROLLER_PATH = path.join(PROJECT_ROOT, 'src', 'Track2_TowerSystem', 'TowerController.server.luau');
 const GAME_CONFIG_PATH = path.join(PROJECT_ROOT, 'src', 'Shared', 'GameConfig.luau');
 
-const waveSource = fs.readFileSync(WAVE_MANAGER_PATH, 'utf8');
-const towerSource = fs.readFileSync(TOWER_CONTROLLER_PATH, 'utf8');
-const configSource = fs.readFileSync(GAME_CONFIG_PATH, 'utf8');
+const waveSource = fs.readFileSync(WAVE_MANAGER_PATH, 'utf8').replace(/\r\n/g, '\n');
+const towerSource = fs.readFileSync(TOWER_CONTROLLER_PATH, 'utf8').replace(/\r\n/g, '\n');
+const configSource = fs.readFileSync(GAME_CONFIG_PATH, 'utf8').replace(/\r\n/g, '\n');
 
 const testResults = {
   timestamp: new Date().toISOString(),
