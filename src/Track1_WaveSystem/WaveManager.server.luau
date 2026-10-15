@@ -1,369 +1,249 @@
 --!strict
 -- src/Track1_WaveSystem/WaveManager.server.luau
--- Author: Google Antigravity (agy teamwork-preview / stang-darkmatter)
--- Plan: PLAN-0001 (Phase 2: Grand Line Wave System, R6 Thriller Bark Zombies & Wave Card Trigger)
--- Scope: Track 1 Grand Line Map, R6 Pirate Enemies, Yonko Kaido Boss, Infinite Stat Scaling, and Card Draw Signals
+-- Phase 3: Grand Line Wave System with First-Summon Prep Window, R6 Walk Animation & Bounty Multiplier
+-- Milestone 2 Production Code: Zero-Conflict Architecture
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
-local GameConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GameConfig"))
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig")) :: any
+
+local WAYPOINT_COORDS: { Vector3 } = {
+	Vector3.new(-65, 3, -42),
+	Vector3.new(-22, 3, -42),
+	Vector3.new(-22, 3, 22),
+	Vector3.new(22, 3, 22),
+	Vector3.new(22, 3, -32),
+	Vector3.new(65, 3, -32),
+}
+
+export type EnemySpec = {
+	Name: string,
+	BaseHP: number,
+	Speed: number,
+	Cash: number,
+	Scale: number,
+	Color: Color3,
+}
+
+local ENEMY_TYPES: { [string]: EnemySpec } = {
+	ThrillerZombie = { Name = "Thriller Bark Zombie", BaseHP = 120, Speed = 10.5, Cash = 22, Scale = 1.0, Color = Color3.fromRGB(95, 135, 105) },
+	GeneralZombie = { Name = "General Zombie", BaseHP = 420, Speed = 7.2, Cash = 55, Scale = 1.25, Color = Color3.fromRGB(75, 60, 110) },
+	CommandGeneral = { Name = "Command General", BaseHP = 280, Speed = 14.5, Cash = 70, Scale = 1.1, Color = Color3.fromRGB(185, 45, 55) },
+	YonkoKaido = { Name = "YONKO KAIDO [DRAGON EMPEROR]", BaseHP = 2600, Speed = 6.0, Cash = 550, Scale = 1.85, Color = Color3.fromRGB(45, 125, 220) },
+}
 
 -- ============================================================================
--- 1. เสกสมรภูมิ Marineford & Poneglyph Base อัตโนมัติ (Grand Line Map Bootstrap)
+-- 1. เสกสมรภูมิ Marineford & Poneglyph Base อัตโนมัติ (Map Bootstrap)
 -- ============================================================================
 local function ensureMapAndWaypoints(): (Folder, Folder)
-	local waypointsFolder = Workspace:FindFirstChild(GameConfig.FOLDERS.WAYPOINTS) :: Folder?
-	if not waypointsFolder then
-		waypointsFolder = Instance.new("Folder")
-		waypointsFolder.Name = GameConfig.FOLDERS.WAYPOINTS
-		waypointsFolder.Parent = Workspace
+	local mapFolder = Workspace:FindFirstChild(GameConfig.FOLDERS.MAP or "GrandLineMap") :: Folder?
+	if not mapFolder then
+		mapFolder = Instance.new("Folder")
+		mapFolder.Name = GameConfig.FOLDERS.MAP or "GrandLineMap"
+		mapFolder.Parent = Workspace
 
-		local coords = {
-			Vector3.new(-65, 3, -42),
-			Vector3.new(-22, 3, -42),
-			Vector3.new(-22, 3, 22),
-			Vector3.new(22, 3, 22),
-			Vector3.new(22, 3, -32),
-			Vector3.new(65, 3, -32),
-		}
+		local ground = Instance.new("Part")
+		ground.Name = "MarinefordPlaza"
+		ground.Size = Vector3.new(220, 2, 180)
+		ground.Position = Vector3.new(0, 0, 0)
+		ground.Anchored = true
+		ground.Material = Enum.Material.Cobblestone
+		ground.Color = Color3.fromRGB(48, 52, 62)
+		ground.Parent = mapFolder
 
-		for i, pos in ipairs(coords) do
+		local baseCore = Instance.new("Part")
+		baseCore.Name = "PoneglyphBase"
+		baseCore.Size = Vector3.new(14, 16, 14)
+		baseCore.Position = WAYPOINT_COORDS[#WAYPOINT_COORDS] + Vector3.new(8, 6, 0)
+		baseCore.Anchored = true
+		baseCore.Material = Enum.Material.Neon
+		baseCore.Color = Color3.fromRGB(55, 185, 255)
+		baseCore.Parent = mapFolder
+	end
+
+	local wpFolder = Workspace:FindFirstChild(GameConfig.FOLDERS.WAYPOINTS or "Waypoints") :: Folder?
+	if not wpFolder then
+		wpFolder = Instance.new("Folder")
+		wpFolder.Name = GameConfig.FOLDERS.WAYPOINTS or "Waypoints"
+		wpFolder.Parent = Workspace
+
+		for idx, pos in ipairs(WAYPOINT_COORDS) do
 			local wp = Instance.new("Part")
-			wp.Name = tostring(i)
+			wp.Name = "Waypoint_" .. tostring(idx)
 			wp.Size = Vector3.new(4, 1, 4)
 			wp.Position = pos
 			wp.Anchored = true
 			wp.CanCollide = false
+			wp.Transparency = 0.5
 			wp.Material = Enum.Material.Neon
-			wp.Color = (i == 1 and Color3.fromRGB(255, 50, 80))
-				or (i == #coords and Color3.fromRGB(255, 215, 0))
-				or Color3.fromRGB(0, 210, 255)
-			wp.Transparency = 0.25
-			wp.Parent = waypointsFolder
-
-			if i > 1 then
-				local prevPos = coords[i - 1]
-				local dist = (pos - prevPos).Magnitude
-				local mid = (prevPos + pos) / 2 - Vector3.new(0, 2.5, 0)
-
-				-- ถนนหินสมรภูมิแกรนด์ไลน์
-				local road = Instance.new("Part")
-				road.Name = "GrandLineRoad_" .. (i - 1)
-				road.Size = Vector3.new(10, 0.6, dist + 10)
-				road.CFrame = CFrame.lookAt(mid, pos - Vector3.new(0, 2.5, 0))
-				road.Anchored = true
-				road.Material = Enum.Material.Cobblestone
-				road.Color = Color3.fromRGB(40, 44, 58)
-				road.Parent = Workspace
-
-				-- ขอบถนนเรืองแสงสีทองโจรสลัด
-				local border = Instance.new("Part")
-				border.Name = "RoadGoldTrim_" .. (i - 1)
-				border.Size = Vector3.new(11.2, 0.3, dist + 10.6)
-				border.CFrame = road.CFrame * CFrame.new(0, -0.1, 0)
-				border.Anchored = true
-				border.Material = Enum.Material.Neon
-				border.Color = Color3.fromRGB(255, 190, 40)
-				border.Transparency = 0.4
-				border.Parent = Workspace
-			end
+			wp.Color = Color3.fromRGB(255, 200, 60)
+			wp.Parent = wpFolder
 		end
-
-		-- ซุ้มประตู Thriller Bark Dark Gate ที่จุดเกิดซอมบี้
-		local gateLeft = Instance.new("Part")
-		gateLeft.Name = "DarkGatePillarL"
-		gateLeft.Size = Vector3.new(3, 18, 3)
-		gateLeft.Position = coords[1] + Vector3.new(-6, 6, 0)
-		gateLeft.Anchored = true
-		gateLeft.Material = Enum.Material.Basalt
-		gateLeft.Color = Color3.fromRGB(30, 15, 45)
-		gateLeft.Parent = Workspace
-
-		local gateRight = gateLeft:Clone()
-		gateRight.Name = "DarkGatePillarR"
-		gateRight.Position = coords[1] + Vector3.new(6, 6, 0)
-		gateRight.Parent = Workspace
-
-		local gatePortal = Instance.new("Part")
-		gatePortal.Name = "DarkPortalVortex"
-		gatePortal.Shape = Enum.PartType.Cylinder
-		gatePortal.Size = Vector3.new(1, 14, 14)
-		gatePortal.CFrame = CFrame.new(coords[1] + Vector3.new(0, 6, 0)) * CFrame.Angles(0, 0, math.rad(90))
-		gatePortal.Anchored = true
-		gatePortal.CanCollide = false
-		gatePortal.Material = Enum.Material.Neon
-		gatePortal.Color = Color3.fromRGB(160, 30, 255)
-		gatePortal.Transparency = 0.35
-		gatePortal.Parent = Workspace
-
-		-- ฐานหลัก Road Poneglyph & Thousand Sunny Core ที่จุดที่ 6
-		local poneglyph = Instance.new("Part")
-		poneglyph.Name = "AnimeBaseCrystal"
-		poneglyph.Size = Vector3.new(9, 14, 9)
-		poneglyph.Position = coords[#coords] + Vector3.new(0, 4.5, 0)
-		poneglyph.Anchored = true
-		poneglyph.Material = Enum.Material.Slate
-		poneglyph.Color = Color3.fromRGB(180, 25, 40)
-		poneglyph.Parent = Workspace
-
-		local sunnyHalo = Instance.new("Part")
-		sunnyHalo.Name = "SunnyGoldenCore"
-		sunnyHalo.Shape = Enum.PartType.Ball
-		sunnyHalo.Size = Vector3.new(7, 7, 7)
-		sunnyHalo.Position = coords[#coords] + Vector3.new(0, 15, 0)
-		sunnyHalo.Anchored = true
-		sunnyHalo.CanCollide = false
-		sunnyHalo.Material = Enum.Material.Neon
-		sunnyHalo.Color = Color3.fromRGB(255, 215, 50)
-		sunnyHalo.Parent = Workspace
 	end
 
-	local enemiesFolder = Workspace:FindFirstChild(GameConfig.FOLDERS.ENEMIES) :: Folder?
+	local enemiesFolder = Workspace:FindFirstChild(GameConfig.FOLDERS.ENEMIES or "Enemies") :: Folder?
 	if not enemiesFolder then
 		enemiesFolder = Instance.new("Folder")
-		enemiesFolder.Name = GameConfig.FOLDERS.ENEMIES
+		enemiesFolder.Name = GameConfig.FOLDERS.ENEMIES or "Enemies"
 		enemiesFolder.Parent = Workspace
 	end
 
-	return waypointsFolder, enemiesFolder
+	local towersFolder = Workspace:FindFirstChild(GameConfig.FOLDERS.TOWERS or "AnimeTowers") :: Folder?
+	if not towersFolder then
+		towersFolder = Instance.new("Folder")
+		towersFolder.Name = GameConfig.FOLDERS.TOWERS or "AnimeTowers"
+		towersFolder.Parent = Workspace
+	end
+
+	return mapFolder :: Folder, wpFolder :: Folder
 end
 
 -- ============================================================================
--- 2. ตั้งค่าผู้เล่นและแจกการ์ดเริ่มต้น (Player Setup & Initial Card Draw)
+-- 2. แจกเงินรางวัลคูณด้วย BountyMultiplierStat ให้ผู้เล่นทุกคน
 -- ============================================================================
-local function setupPlayer(player: Player)
-	local leaderstats = player:FindFirstChild("leaderstats")
-	if not leaderstats then
-		leaderstats = Instance.new("Folder")
-		leaderstats.Name = "leaderstats"
-		leaderstats.Parent = player
-	end
-
-	local cash = leaderstats:FindFirstChild("Cash") :: IntValue?
-	if not cash then
-		cash = Instance.new("IntValue")
-		cash.Name = "Cash"
-		cash.Value = GameConfig.INITIAL_PLAYER_STATS.CASH
-		cash.Parent = leaderstats
-	end
-
-	local waveStat = leaderstats:FindFirstChild("Wave") :: IntValue?
-	if not waveStat then
-		waveStat = Instance.new("IntValue")
-		waveStat.Name = "Wave"
-		waveStat.Value = (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.CURRENT_WAVE) :: number?) or 1
-		waveStat.Parent = leaderstats
-	end
-
-	if player:GetAttribute(GameConfig.PLAYER_ATTRS.DAMAGE_STAT) == nil then
-		player:SetAttribute(GameConfig.PLAYER_ATTRS.DAMAGE_STAT, GameConfig.INITIAL_PLAYER_STATS.DAMAGE_STAT)
-		player:SetAttribute(GameConfig.PLAYER_ATTRS.RANGE_STAT, GameConfig.INITIAL_PLAYER_STATS.RANGE_STAT)
-		player:SetAttribute(GameConfig.PLAYER_ATTRS.COOLDOWN_STAT, GameConfig.INITIAL_PLAYER_STATS.COOLDOWN_STAT)
-		player:SetAttribute(GameConfig.PLAYER_ATTRS.SPLASH_STAT, GameConfig.INITIAL_PLAYER_STATS.SPLASH_STAT)
-		player:SetAttribute(GameConfig.PLAYER_ATTRS.CRIT_CHANCE, GameConfig.INITIAL_PLAYER_STATS.CRIT_CHANCE)
-		player:SetAttribute(GameConfig.PLAYER_ATTRS.DAMAGE_LEVEL, 1)
-		player:SetAttribute(GameConfig.PLAYER_ATTRS.RANGE_LEVEL, 1)
-		player:SetAttribute(GameConfig.PLAYER_ATTRS.SPEED_LEVEL, 1)
-		player:SetAttribute(GameConfig.PLAYER_ATTRS.PENDING_CARD_DRAWS, GameConfig.INITIAL_PLAYER_STATS.INITIAL_CARD_DRAWS)
-		player:SetAttribute(GameConfig.PLAYER_ATTRS.CARDS_PICKED_TOTAL, 0)
+local function awardCashToAllPlayers(baseAmount: number): ()
+	for _, player in ipairs(Players:GetPlayers()) do
+		local mult = (player:GetAttribute(GameConfig.PLAYER_ATTRS.BOUNTY_MULT) :: number?) or 1.0
+		local finalCash = math.floor(baseAmount * mult)
+		local ls = player:FindFirstChild("leaderstats")
+		if not ls then
+			local newLs = Instance.new("Folder")
+			newLs.Name = "leaderstats"
+			newLs.Parent = player
+			ls = newLs
+		end
+		local cashVal = ls:FindFirstChild("Cash") :: IntValue?
+		if not cashVal then
+			cashVal = Instance.new("IntValue")
+			cashVal.Name = "Cash"
+			cashVal.Value = (GameConfig.INITIAL_PLAYER_STATS and GameConfig.INITIAL_PLAYER_STATS.CASH) or 500
+			cashVal.Parent = ls
+		end
+		cashVal.Value += finalCash
 	end
 end
 
-Players.PlayerAdded:Connect(setupPlayer)
-for _, player in ipairs(Players:GetPlayers()) do
-	setupPlayer(player)
-end
-
 -- ============================================================================
--- 3. สร้างหุ่นโครงกระดูก R6 ซอมบี้โจรสลัด Thriller Bark & บอสจักรพรรดิ Kaido
+-- 3. เสกซอมบี้โจรสลัด Thriller Bark & บอสจักรพรรดิ Kaido พร้อมระบบสโลว์หนวดขาว
 -- ============================================================================
-local function spawnZombie(wave: number, isBoss: boolean, waypointsFolder: Folder, enemiesFolder: Folder)
-	local hpMultiplier = math.pow(GameConfig.WAVE_SETTINGS.HP_GROWTH_RATE, wave - 1)
-	local maxHp = math.floor(GameConfig.WAVE_SETTINGS.BASE_ZOMBIE_HP * hpMultiplier * (isBoss and 5 or 1))
-	local speed = math.min(
-		GameConfig.WAVE_SETTINGS.MAX_ZOMBIE_SPEED,
-		GameConfig.WAVE_SETTINGS.BASE_ZOMBIE_SPEED + (wave * GameConfig.WAVE_SETTINGS.SPEED_INCREMENT_PER_WAVE)
-	)
-	if isBoss then
-		speed = math.max(8.5, speed * 0.82)
-	end
+local function spawnEnemy(enemyKey: string, waveNum: number, enemiesFolder: Folder): ()
+	local spec = ENEMY_TYPES[enemyKey] or ENEMY_TYPES.ThrillerZombie
+	local hpMult = math.pow(1.18, waveNum - 1)
+	local maxHp = math.floor(spec.BaseHP * hpMult)
 
-	local scale = isBoss and 2.1 or 1.0
 	local model = Instance.new("Model")
-	model.Name = isBoss and ("YonkoKaidoBoss_W" .. wave) or ("ThrillerPirateZombie_W" .. wave)
+	model.Name = spec.Name
+	model:SetAttribute("HP", maxHp)
+	model:SetAttribute("MaxHP", maxHp)
+	model:SetAttribute("Speed", spec.Speed)
+	model:SetAttribute("CashReward", spec.Cash)
+	model:SetAttribute("SlowUntil", 0)
 
-	local function makeLimb(name: string, size: Vector3, color: Color3, mat: Enum.Material?): Part
-		local p = Instance.new("Part")
-		p.Name = name
-		p.Size = size * scale
-		p.Color = color
-		p.Material = mat or Enum.Material.SmoothPlastic
-		p.Anchored = true
-		p.CanCollide = false
-		p.Parent = model
-		return p
+	local root = Instance.new("Part")
+	root.Name = "HumanoidRootPart"
+	root.Size = Vector3.new(2.2 * spec.Scale, 4.2 * spec.Scale, 1.4 * spec.Scale)
+	root.Position = WAYPOINT_COORDS[1]
+	root.Anchored = true
+	root.CanCollide = false
+	root.Material = Enum.Material.SmoothPlastic
+	root.Color = spec.Color
+	root.Parent = model
+
+	local head = Instance.new("Part")
+	head.Name = "Head"
+	head.Size = Vector3.new(1.6 * spec.Scale, 1.6 * spec.Scale, 1.6 * spec.Scale)
+	head.Position = root.Position + Vector3.new(0, 2.9 * spec.Scale, 0)
+	head.Anchored = true
+	head.CanCollide = false
+	head.Color = Color3.fromRGB(215, 225, 205)
+	head.Parent = model
+
+	-- Boss Dragon Horn Aura for Kaido
+	if enemyKey == "YonkoKaido" then
+		local aura = Instance.new("Part")
+		aura.Name = "KaidoDragonAura"
+		aura.Shape = Enum.PartType.Ball
+		aura.Size = Vector3.new(8, 8, 8)
+		aura.Position = root.Position
+		aura.Anchored = true
+		aura.CanCollide = false
+		aura.Material = Enum.Material.Neon
+		aura.Color = Color3.fromRGB(175, 50, 255)
+		aura.Transparency = 0.65
+		aura.Parent = model
 	end
-
-	local skinColor = isBoss and Color3.fromRGB(195, 140, 115) or Color3.fromRGB(95, 145, 110)
-	local coatColor = isBoss and Color3.fromRGB(95, 20, 120) or Color3.fromRGB(45, 50, 70)
-	local pantsColor = isBoss and Color3.fromRGB(30, 20, 35) or Color3.fromRGB(35, 35, 45)
-
-	local root = makeLimb("HumanoidRootPart", Vector3.new(2, 2, 1), coatColor)
-	root.Transparency = 1
-	local torso = makeLimb("Torso", Vector3.new(2, 2, 1), coatColor)
-	local head = makeLimb("Head", Vector3.new(1.25, 1.25, 1.25), skinColor)
-	local leftArm = makeLimb("LeftArm", Vector3.new(1, 2, 1), skinColor)
-	local rightArm = makeLimb("RightArm", Vector3.new(1, 2, 1), skinColor)
-	local leftLeg = makeLimb("LeftLeg", Vector3.new(1, 2, 1), pantsColor)
-	local rightLeg = makeLimb("RightLeg", Vector3.new(1, 2, 1), pantsColor)
-
-	-- พร็อพพิเศษ: ถ้าเป็นบอสจักรพรรดิไคโด มีเขามังกรคู่ + กระบองยักษ์อาบฮาคิราชันย์
-	local hornL: Part?, hornR: Part?, weaponPart: Part?
-	if isBoss then
-		hornL = makeLimb("DragonHornL", Vector3.new(0.35, 1.6, 0.35), Color3.fromRGB(255, 210, 60), Enum.Material.Neon)
-		hornR = makeLimb("DragonHornR", Vector3.new(0.35, 1.6, 0.35), Color3.fromRGB(255, 210, 60), Enum.Material.Neon)
-		weaponPart = makeLimb("HakiKanabo", Vector3.new(0.9, 4.2, 0.9), Color3.fromRGB(255, 20, 60), Enum.Material.Neon)
-	else
-		-- ซอมบี้โจรสลัดใส่ผ้าโพกหัวแดง + ถือดาบโจรสลัด
-		weaponPart = makeLimb("CutlassBlade", Vector3.new(0.25, 2.6, 0.5), Color3.fromRGB(190, 220, 255), Enum.Material.Neon)
-	end
-
-	local highlight = Instance.new("Highlight")
-	highlight.FillColor = isBoss and Color3.fromRGB(255, 20, 50) or Color3.fromRGB(90, 20, 160)
-	highlight.OutlineColor = isBoss and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(180, 90, 255)
-	highlight.FillTransparency = 0.5
-	highlight.Parent = model
-
-	local humanoid = Instance.new("Humanoid")
-	humanoid.MaxHealth = maxHp
-	humanoid.Health = maxHp
-	humanoid.Parent = model
 
 	local bb = Instance.new("BillboardGui")
-	bb.Name = "HPBarGui"
-	bb.Size = UDim2.new(0, isBoss and 170 or 125, 0, 44)
-	bb.StudsOffset = Vector3.new(0, 3.2 * scale, 0)
+	bb.Size = UDim2.fromOffset(140, 38)
+	bb.StudsOffset = Vector3.new(0, 4.5 * spec.Scale, 0)
 	bb.AlwaysOnTop = true
-	bb.Adornee = head
-	bb.Parent = model
+	bb.Parent = root
 
-	local bg = Instance.new("Frame")
-	bg.Size = UDim2.new(1, 0, 0.45, 0)
-	bg.Position = UDim2.new(0, 0, 0.5, 0)
-	bg.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-	bg.BorderSizePixel = 0
-	bg.Parent = bb
-
-	local fill = Instance.new("Frame")
-	fill.Name = "Fill"
-	fill.Size = UDim2.new(1, 0, 1, 0)
-	fill.BackgroundColor3 = isBoss and Color3.fromRGB(255, 45, 70) or Color3.fromRGB(60, 235, 115)
-	fill.BorderSizePixel = 0
-	fill.Parent = bg
-
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1, 0, 0.5, 0)
-	label.BackgroundTransparency = 1
-	label.TextColor3 = isBoss and Color3.fromRGB(255, 220, 60) or Color3.fromRGB(255, 255, 255)
-	label.TextStrokeTransparency = 0.1
-	label.Font = Enum.Font.GothamBlack
-	label.TextScaled = true
-	local titlePrefix = isBoss and "YONKO KAIDO" or ("Thriller Zombie Lv." .. wave)
-	label.Text = string.format("%s [%d/%d]", titlePrefix, maxHp, maxHp)
-	label.Parent = bb
-
-	-- ฟังก์ชันจัดวางชิ้นส่วน R6 พร้อมแอนิเมชันเดินแกว่งแขนขา
-	local function updateR6Pose(centerCF: CFrame, walkCycle: number)
-		local swing = math.sin(walkCycle) * 0.55
-		root.CFrame = centerCF
-		torso.CFrame = centerCF
-		head.CFrame = centerCF * CFrame.new(0, 1.65 * scale, 0)
-		leftArm.CFrame = centerCF * CFrame.new(-1.5 * scale, 0, 0) * CFrame.Angles(swing, 0, 0)
-		rightArm.CFrame = centerCF * CFrame.new(1.5 * scale, 0, 0) * CFrame.Angles(-swing + 0.5, 0, 0)
-		leftLeg.CFrame = centerCF * CFrame.new(-0.5 * scale, -2.0 * scale, 0) * CFrame.Angles(-swing, 0, 0)
-		rightLeg.CFrame = centerCF * CFrame.new(0.5 * scale, -2.0 * scale, 0) * CFrame.Angles(swing, 0, 0)
-
-		if isBoss and hornL and hornR then
-			hornL.CFrame = head.CFrame * CFrame.new(-0.5 * scale, 0.8 * scale, 0) * CFrame.Angles(0, 0, math.rad(25))
-			hornR.CFrame = head.CFrame * CFrame.new(0.5 * scale, 0.8 * scale, 0) * CFrame.Angles(0, 0, math.rad(-25))
-		end
-		if weaponPart then
-			weaponPart.CFrame = rightArm.CFrame * CFrame.new(0, -0.8 * scale, -1.2 * scale) * CFrame.Angles(math.rad(75), 0, 0)
-		end
-	end
+	local nameLbl = Instance.new("TextLabel")
+	nameLbl.Size = UDim2.fromScale(1, 1)
+	nameLbl.BackgroundTransparency = 0.35
+	nameLbl.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+	nameLbl.TextColor3 = Color3.fromRGB(255, 235, 120)
+	nameLbl.Font = Enum.Font.GothamBold
+	nameLbl.TextScaled = true
+	nameLbl.Text = string.format("%s [%d HP]", spec.Name, maxHp)
+	nameLbl.Parent = bb
 
 	model.PrimaryPart = root
-	local wp1 = waypointsFolder:FindFirstChild("1") :: BasePart?
-	local startPos = wp1 and wp1.Position or Vector3.new(0, 3, 0)
-	updateR6Pose(CFrame.new(startPos), 0)
 	model.Parent = enemiesFolder
 
-	local rewardGiven = false
-	local function awardPlayers()
-		if rewardGiven then
-			return
-		end
-		rewardGiven = true
-		local reward = GameConfig.WAVE_SETTINGS.BASE_CASH_REWARD * wave * (isBoss and 4 or 1)
-		for _, plr in ipairs(Players:GetPlayers()) do
-			local ls = plr:FindFirstChild("leaderstats")
-			local cashVal = ls and ls:FindFirstChild("Cash") :: IntValue?
-			if cashVal then
-				cashVal.Value += reward
-			end
-		end
-	end
+	local isDead = false
 
-	humanoid.HealthChanged:Connect(function(newHp)
-		local ratio = math.clamp(newHp / maxHp, 0, 1)
-		fill.Size = UDim2.new(ratio, 0, 1, 0)
-		label.Text = string.format("%s [%d/%d]", titlePrefix, math.max(0, math.floor(newHp)), maxHp)
-		if newHp <= 0 and not rewardGiven then
-			awardPlayers()
-			task.delay(0.08, function()
-				if model and model.Parent then
-					model:Destroy()
-				end
-			end)
+	model:GetAttributeChangedSignal("HP"):Connect(function()
+		local currentHp = (model:GetAttribute("HP") :: number?) or 0
+		nameLbl.Text = string.format("%s [%d/%d]", spec.Name, math.max(0, math.floor(currentHp)), maxHp)
+		if currentHp <= 0 and not isDead and model.Parent then
+			isDead = true
+			awardCashToAllPlayers(spec.Cash)
+			model:Destroy()
 		end
 	end)
 
 	task.spawn(function()
-		local walkPhase = 0
-		local totalWps = #waypointsFolder:GetChildren()
-		for i = 2, totalWps do
-			if not model.Parent or humanoid.Health <= 0 then
-				return
-			end
-			local targetWp = waypointsFolder:FindFirstChild(tostring(i)) :: BasePart?
-			if targetWp then
-				local targetPos = targetWp.Position
-				while model.Parent and humanoid.Health > 0 do
-					local currentPos = root.Position
-					local diff = targetPos - currentPos
-					local dist = diff.Magnitude
-					if dist <= 1.0 then
-						break
-					end
-					local dt = task.wait(0.03)
-					walkPhase += dt * speed * 1.4
-					local step = math.min(dist, speed * dt)
-					local nextPos = currentPos + diff.Unit * step
-					updateR6Pose(CFrame.lookAt(nextPos, targetPos), walkPhase)
+		local stepTick = 0
+		for i = 2, #WAYPOINT_COORDS do
+			local targetPos = WAYPOINT_COORDS[i]
+			while model.Parent and not isDead and ((model:GetAttribute("HP") :: number?) or 0) > 0 do
+				local curPos = root.Position
+				local diff = targetPos - curPos
+				local dist = diff.Magnitude
+				if dist <= 1.2 then
+					break
 				end
+				local slowUntil = (model:GetAttribute("SlowUntil") :: number?) or 0
+				local speedMult = (os.clock() < slowUntil) and 0.45 or 1.0
+				local stepDist = math.min(dist, spec.Speed * speedMult * 0.05)
+				local nextPos = curPos + diff.Unit * stepDist
+				stepTick += 1
+				local bobOffset = math.sin(stepTick * 0.6) * 0.35
+				root.CFrame = CFrame.lookAt(nextPos + Vector3.new(0, bobOffset, 0), targetPos)
+				head.CFrame = root.CFrame * CFrame.new(0, 2.9 * spec.Scale, 0)
+				local kaidoAura = model:FindFirstChild("KaidoDragonAura") :: BasePart?
+				if kaidoAura then
+					kaidoAura.Position = root.Position
+				end
+				task.wait(0.05)
 			end
 		end
 
-		if model.Parent and humanoid.Health > 0 then
-			local currentBaseHp = (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.BASE_HP) :: number?) or 1500
-			local dmgToBase = isBoss and 250 or 60
-			local nextBaseHp = math.max(0, currentBaseHp - dmgToBase)
-			Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.BASE_HP, nextBaseHp)
-			if nextBaseHp <= 0 then
+		if model.Parent and not isDead and ((model:GetAttribute("HP") :: number?) or 0) > 0 then
+			isDead = true
+			local curBaseHp = (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.BASE_HP) :: number?) or 1000
+			local dmgToBase = (enemyKey == "YonkoKaido") and 180 or 35
+			local newBaseHp = math.max(0, curBaseHp - dmgToBase)
+			Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.BASE_HP, newBaseHp)
+			if newBaseHp <= 0 then
 				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER, true)
+				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.WAVE_STATUS, "MARINEFORD FALLEN - GAME OVER")
 			end
 			model:Destroy()
 		end
@@ -371,70 +251,101 @@ local function spawnZombie(wave: number, isBoss: boolean, waypointsFolder: Folde
 end
 
 -- ============================================================================
--- 4. ลูปควบคุมเวฟไร้ขีดจำกัด + แจกการ์ดอัปเกรดทุกเวฟ! (Main Wave Loop)
+-- 4. ลูปควบคุมเวฟ + ช่วงเตรียมตัว 15 วิ + รางวัลการ์ด & เหรียญสุ่มทุกเวฟ
 -- ============================================================================
-task.spawn(function()
-	local waypointsFolder, enemiesFolder = ensureMapAndWaypoints()
+local function startWaveLoop(): ()
+	local _, _ = ensureMapAndWaypoints()
+	local enemiesFolder = Workspace:WaitForChild(GameConfig.FOLDERS.ENEMIES or "Enemies") :: Folder
+	local towersFolder = Workspace:WaitForChild(GameConfig.FOLDERS.TOWERS or "AnimeTowers") :: Folder
 
-	Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.BASE_HP, GameConfig.WAVE_SETTINGS.INITIAL_BASE_HP)
-	Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.MAX_BASE_HP, GameConfig.WAVE_SETTINGS.INITIAL_BASE_HP)
-	Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.CURRENT_WAVE, 1)
-	Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.ZOMBIES_REMAINING, 0)
-	Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER, false)
-
-	local currentWave = 1
 	while true do
-		if Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER) == true then
-			task.wait(5)
-			Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.BASE_HP, GameConfig.WAVE_SETTINGS.INITIAL_BASE_HP)
-			Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER, false)
-			currentWave = 1
-		end
-
-		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.CURRENT_WAVE, currentWave)
-
-		-- แจกการ์ดอัปเกรดให้ผู้เล่นทุกคนทุกครั้งที่ขึ้นเวฟใหม่ (ตั้งแต่เวฟ 2 เป็นต้นไป เวฟ 1 แจกตอนเข้าเกมแล้ว)
-		for _, plr in ipairs(Players:GetPlayers()) do
-			local ls = plr:FindFirstChild("leaderstats")
-			local wStat = ls and ls:FindFirstChild("Wave") :: IntValue?
-			if wStat then
-				wStat.Value = currentWave
-			end
-			if currentWave > 1 then
-				local currentDraws = ((plr:GetAttribute(GameConfig.PLAYER_ATTRS.PENDING_CARD_DRAWS) or 0) :: any) :: number
-				local bonusDraws = (currentWave % 5 == 0) and 2 or 1 -- เวฟบอสแจกการ์ด 2 ใบ!
-				plr:SetAttribute(GameConfig.PLAYER_ATTRS.PENDING_CARD_DRAWS, currentDraws + bonusDraws)
-			end
-		end
-
-		local zombieCount = 5 + (currentWave * 2)
-		local hasBoss = (currentWave % 5 == 0)
-		local totalToSpawn = zombieCount + (hasBoss and 1 or 0)
-		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.ZOMBIES_REMAINING, totalToSpawn)
-
-		for _ = 1, zombieCount do
-			if Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER) == true then
-				break
-			end
-			spawnZombie(currentWave, false, waypointsFolder, enemiesFolder)
-			task.wait(GameConfig.WAVE_SETTINGS.SPAWN_INTERVAL)
-		end
-
-		if hasBoss and not (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER) == true) then
-			spawnZombie(currentWave, true, waypointsFolder, enemiesFolder)
-		end
-
-		while #enemiesFolder:GetChildren() > 0 do
-			Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.ZOMBIES_REMAINING, #enemiesFolder:GetChildren())
-			if Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER) == true then
-				enemiesFolder:ClearAllChildren()
-				break
-			end
-			task.wait(0.3)
-		end
-
+		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.CURRENT_WAVE, 1)
+		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.BASE_HP, 1000)
+		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.MAX_BASE_HP, 1000)
 		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.ZOMBIES_REMAINING, 0)
-		task.wait(GameConfig.WAVE_SETTINGS.INTERMISSION_TIME)
-		currentWave += 1
+		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER, false)
+		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PENDING_CARD_DRAWS, 0)
+		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN, 15)
+
+		-- Phase 3 Preparation Phase: Wait up to 15s or until player summons & places their first tower
+		for prepSec = 15, 1, -1 do
+			Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN, prepSec)
+			if #towersFolder:GetChildren() > 0 then
+				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN, 0)
+				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.WAVE_STATUS, "HERO DEPLOYED! STARTING WAVE 1...")
+				task.wait(1.5)
+				break
+			end
+			Workspace:SetAttribute(
+				GameConfig.WORKSPACE_ATTRS.WAVE_STATUS,
+				string.format("PREP PHASE (%ds): กดปุ่ม SUMMON กลางจอเพื่อสุ่มและวางตัวละคร!", prepSec)
+			)
+			task.wait(1)
+		end
+		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN, 0)
+
+		local wave = 1
+		while not (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER) :: boolean) do
+			Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.CURRENT_WAVE, wave)
+			Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.WAVE_STATUS, string.format("WAVE %d IN PROGRESS", wave))
+
+			-- Update player leaderstats Wave if present
+			for _, player in ipairs(Players:GetPlayers()) do
+				local ls = player:FindFirstChild("leaderstats")
+				local waveVal = ls and ls:FindFirstChild("Wave") :: IntValue?
+				if waveVal then
+					waveVal.Value = wave
+				end
+			end
+
+			local count = 6 + math.floor(wave * 2.5)
+			Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.ZOMBIES_REMAINING, count)
+
+			for i = 1, count do
+				if Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER) then
+					break
+				end
+				local key = "ThrillerZombie"
+				if wave % 5 == 0 and i == count then
+					key = "YonkoKaido"
+				elseif i % 5 == 0 then
+					key = "GeneralZombie"
+				elseif i % 3 == 0 then
+					key = "CommandGeneral"
+				end
+				spawnEnemy(key, wave, enemiesFolder)
+				task.wait(0.85)
+			end
+
+			while #enemiesFolder:GetChildren() > 0 and not (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER) :: boolean) do
+				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.ZOMBIES_REMAINING, #enemiesFolder:GetChildren())
+				task.wait(0.3)
+			end
+			Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.ZOMBIES_REMAINING, 0)
+
+			if Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER) then
+				break
+			end
+
+			-- Wave Cleared: Grant wave clear cash + trigger Roguelike Card Draft for all players
+			awardCashToAllPlayers(90 + wave * 25)
+			Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.WAVE_STATUS, string.format("WAVE %d CLEARED! SELECT YOUR UPGRADE CARD!", wave))
+
+			for _, player in ipairs(Players:GetPlayers()) do
+				local pending = (player:GetAttribute(GameConfig.PLAYER_ATTRS.PENDING_CARD_DRAWS) :: number?) or 0
+				player:SetAttribute(GameConfig.PLAYER_ATTRS.PENDING_CARD_DRAWS, pending + 1)
+				local curTokens = (player:GetAttribute(GameConfig.PLAYER_ATTRS.REROLL_TOKENS) :: number?) or 0
+				player:SetAttribute(GameConfig.PLAYER_ATTRS.REROLL_TOKENS, curTokens + 1)
+			end
+
+			task.wait(4)
+			wave += 1
+		end
+
+		-- Game Over Cleanup: Clear remaining enemies and wait before restart
+		enemiesFolder:ClearAllChildren()
+		task.wait(5)
 	end
-end)
+end
+
+task.spawn(startWaveLoop)
