@@ -1,546 +1,1433 @@
 --!strict
 -- src/Track2_TowerSystem/TowerController.server.luau
--- Anime Limitless Tower Defense (Phase 2): 6 Legendary One Piece R6 Heroes & Signature Ultimate VFX
--- Procedural R6 Rigs: Luffy (Gear 5), Zoro (King of Hell), Sanji (Ifrit Jambe), Ace (Entei), Law (K-ROOM), Shanks (Kamusari)
+-- Anime Limitless Tower Defense — Phase 3: Grand Line Tower System with Masterpiece One Piece VFX, Tactical Pads, Gacha & Combat Engine
+-- Complies with Modular Zero-Conflict Architecture & Canonical Rules R01-R08
 
+local Debris = game:GetService("Debris")
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
-local GameConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GameConfig"))
+local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
+local GameConfig = require(SharedFolder:WaitForChild("GameConfig")) :: any
 
--- 1. ข้อมูลตัวละคร One Piece ทั้ง 6 ตัว (สีชุด อาวุธ และสีท่าไม้ตาย)
-local ONE_PIECE_HEROES = {
-	{
-		Id = "Luffy",
-		DisplayName = "MONKEY D. LUFFY",
-		Title = "SUN GOD NIKA [GEAR 5]",
-		Position = Vector3.new(-42, 3, -28),
-		TorsoColor = Color3.fromRGB(210, 35, 45),
-		LegsColor = Color3.fromRGB(40, 85, 175),
-		HairColor = Color3.fromRGB(20, 20, 25),
-		PrimaryVFXColor = Color3.fromRGB(255, 40, 75),
-		SecondaryVFXColor = Color3.fromRGB(255, 255, 255),
-		AttackStyle = "BajrangFist",
-	},
-	{
-		Id = "Zoro",
-		DisplayName = "RORONOA ZORO",
-		Title = "KING OF HELL [ENMA]",
-		Position = Vector3.new(-32, 3, -8),
-		TorsoColor = Color3.fromRGB(30, 105, 55),
-		LegsColor = Color3.fromRGB(25, 30, 35),
-		HairColor = Color3.fromRGB(60, 210, 95),
-		PrimaryVFXColor = Color3.fromRGB(50, 255, 130),
-		SecondaryVFXColor = Color3.fromRGB(185, 60, 255),
-		AttackStyle = "EnmaSlash",
-	},
-	{
-		Id = "Sanji",
-		DisplayName = "VINSMOKE SANJI",
-		Title = "IFRIT JAMBE [BLUE FLAME]",
-		Position = Vector3.new(-10, 3, 8),
-		TorsoColor = Color3.fromRGB(25, 25, 35),
-		LegsColor = Color3.fromRGB(20, 20, 30),
-		HairColor = Color3.fromRGB(255, 215, 55),
-		PrimaryVFXColor = Color3.fromRGB(0, 195, 255),
-		SecondaryVFXColor = Color3.fromRGB(200, 245, 255),
-		AttackStyle = "IfritKick",
-	},
-	{
-		Id = "Ace",
-		DisplayName = "PORTGAS D. ACE",
-		Title = "FLAME EMPEROR [MERA MERA]",
-		Position = Vector3.new(10, 3, 8),
-		TorsoColor = Color3.fromRGB(235, 185, 145),
-		LegsColor = Color3.fromRGB(30, 30, 35),
-		HairColor = Color3.fromRGB(25, 25, 30),
-		PrimaryVFXColor = Color3.fromRGB(255, 110, 20),
-		SecondaryVFXColor = Color3.fromRGB(255, 220, 60),
-		AttackStyle = "EnteiSun",
-	},
-	{
-		Id = "Law",
-		DisplayName = "TRAFALGAR LAW",
-		Title = "SURGEON OF DEATH [K-ROOM]",
-		Position = Vector3.new(32, 3, -5),
-		TorsoColor = Color3.fromRGB(240, 190, 40),
-		LegsColor = Color3.fromRGB(35, 45, 75),
-		HairColor = Color3.fromRGB(245, 245, 250),
-		PrimaryVFXColor = Color3.fromRGB(65, 225, 255),
-		SecondaryVFXColor = Color3.fromRGB(180, 100, 255),
-		AttackStyle = "RoomShock",
-	},
-	{
-		Id = "Shanks",
-		DisplayName = "RED-HAIRED SHANKS",
-		Title = "CONQUEROR HAKI [KAMUSARI]",
-		Position = Vector3.new(44, 3, -18),
-		TorsoColor = Color3.fromRGB(235, 235, 240),
-		LegsColor = Color3.fromRGB(115, 45, 45),
-		HairColor = Color3.fromRGB(200, 30, 40),
-		PrimaryVFXColor = Color3.fromRGB(255, 15, 45),
-		SecondaryVFXColor = Color3.fromRGB(25, 10, 20),
-		AttackStyle = "KamusariHaki",
-	},
+-- =============================================================================
+-- TYPE DEFINITIONS
+-- =============================================================================
+
+type BagUnit = {
+	Uid: string,
+	HeroId: string,
+	Name: string,
+	Rarity: string,
+	SellValue: number,
 }
 
--- 2. ดึงค่าสเตตัสรวมที่ผู้เล่นอัปเกรดจากการ์ดทุกเวฟ
-local function getCurrentCombatStats(): (number, number, number, number, number)
-	local maxDamage = GameConfig.INITIAL_PLAYER_STATS.DAMAGE_STAT
-	local maxRange = GameConfig.INITIAL_PLAYER_STATS.RANGE_STAT
-	local minCooldown = GameConfig.INITIAL_PLAYER_STATS.COOLDOWN_STAT
-	local maxSplash = (GameConfig.INITIAL_PLAYER_STATS and GameConfig.INITIAL_PLAYER_STATS.SPLASH_STAT) or 6
-	local maxCrit = (GameConfig.INITIAL_PLAYER_STATS and GameConfig.INITIAL_PLAYER_STATS.CRIT_CHANCE) or 15
+-- =============================================================================
+-- REMOTE EVENTS INITIALIZATION (IDEMPOTENT BOOTSTRAP)
+-- =============================================================================
 
-	local splashAttrKey = (GameConfig.PLAYER_ATTRS and GameConfig.PLAYER_ATTRS.SPLASH_STAT) or "SplashStat"
-	local critAttrKey = (GameConfig.PLAYER_ATTRS and GameConfig.PLAYER_ATTRS.CRIT_CHANCE) or "CritChance"
-
-	for _, plr in ipairs(Players:GetPlayers()) do
-		local d = plr:GetAttribute(GameConfig.PLAYER_ATTRS.DAMAGE_STAT)
-		local r = plr:GetAttribute(GameConfig.PLAYER_ATTRS.RANGE_STAT)
-		local c = plr:GetAttribute(GameConfig.PLAYER_ATTRS.COOLDOWN_STAT)
-		local s = plr:GetAttribute(splashAttrKey)
-		local cr = plr:GetAttribute(critAttrKey)
-		if typeof(d) == "number" and d > maxDamage then maxDamage = d end
-		if typeof(r) == "number" and r > maxRange then maxRange = r end
-		if typeof(c) == "number" and c < minCooldown then minCooldown = c end
-		if typeof(s) == "number" and s > maxSplash then maxSplash = s end
-		if typeof(cr) == "number" and cr > maxCrit then maxCrit = cr end
+local function getOrCreateRemote(remoteName: string): RemoteEvent
+	local existing = ReplicatedStorage:FindFirstChild(remoteName)
+	if existing and existing:IsA("RemoteEvent") then
+		return existing
 	end
-
-	return maxDamage, maxRange, math.max(GameConfig.INITIAL_PLAYER_STATS.MIN_COOLDOWN, minCooldown), maxSplash, maxCrit
+	local rem = Instance.new("RemoteEvent")
+	rem.Name = remoteName
+	rem.Parent = ReplicatedStorage
+	return rem
 end
 
--- 3. ฟังก์ชันสร้างสายฟ้าฮาคิราชันย์ซิกแซก (Conqueror's Haki Lightning)
-local function spawnHakiLightning(startPos: Vector3, endPos: Vector3, color: Color3)
-	local segments = 4
-	local prev = startPos
-	for i = 1, segments do
-		local alpha = i / segments
-		local jitter = (i < segments)
-				and Vector3.new(math.random(-25, 25) / 10, math.random(-15, 25) / 10, math.random(-25, 25) / 10)
-			or Vector3.zero
-		local nextPos = startPos:Lerp(endPos, alpha) + jitter
-		local dist = (nextPos - prev).Magnitude
-		if dist >= 0.05 then
-			local bolt = Instance.new("Part")
-			bolt.Name = "HakiLightningBolt"
-			bolt.Anchored = true
-			bolt.CanCollide = false
-			bolt.Material = Enum.Material.Neon
-			bolt.Color = color
-			bolt.Size = Vector3.new(0.45, 0.45, dist)
-			bolt.CFrame = CFrame.lookAt((prev + nextPos) / 2, nextPos)
-			bolt.Parent = Workspace
+local SummonRerollRemote = getOrCreateRemote(GameConfig.REMOTES.TOWER_SUMMON_REROLL)
+local PlacementActionRemote = getOrCreateRemote(GameConfig.REMOTES.TOWER_PLACEMENT_ACTION)
+local CameraShakeRemote = getOrCreateRemote(GameConfig.REMOTES.VFX_CAMERA_SHAKE)
 
-			TweenService:Create(bolt, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-				Size = Vector3.new(0.05, 0.05, dist),
-				Transparency = 1,
-			}):Play()
-			task.delay(0.28, function()
-				if bolt then bolt:Destroy() end
-			end)
-		end
-		prev = nextPos
-	end
-end
+-- =============================================================================
+-- WORKSPACE CONTAINERS (ZERO INITIAL TOWERS CONTRACT)
+-- =============================================================================
 
--- 4. ระบบปล่อยท่าไม้ตาย One Piece สุดอลังการแยกตามตัวละคร!
-local function playOnePieceUltimateVFX(heroConfig: any, originPos: Vector3, targetPos: Vector3, splashRadius: number, isCrit: boolean)
-	local style = heroConfig.AttackStyle
-	local pColor = heroConfig.PrimaryVFXColor
-	local sColor = heroConfig.SecondaryVFXColor
-	local effectScale = isCrit and 1.45 or 1.0
-
-	-- ปล่อยสายฟ้าฮาคิราชันย์ทุกครั้งที่โจมตีติดคริติคอล หรือเป็นท่าของลูฟี่/แชงคูส
-	if isCrit or style == "KamusariHaki" or style == "BajrangFist" then
-		spawnHakiLightning(originPos, targetPos, Color3.fromRGB(255, 20, 55))
-		spawnHakiLightning(targetPos, targetPos + Vector3.new(0, 12 * effectScale, 0), Color3.fromRGB(25, 10, 20))
-	end
-
-	if style == "RoomShock" then
-		-- ท่าของ Trafalgar Law: กางโดมทรงกลมสีฟ้า ROOM แล้วผ่าด้วยเสาสายฟ้าศัลยกรรม
-		local roomDome = Instance.new("Part")
-		roomDome.Name = "OpeOpeRoomDome"
-		roomDome.Shape = Enum.PartType.Ball
-		roomDome.Anchored = true
-		roomDome.CanCollide = false
-		roomDome.Material = Enum.Material.ForceField
-		roomDome.Color = pColor
-		roomDome.Size = Vector3.new(2, 2, 2)
-		roomDome.Position = targetPos
-		roomDome.Transparency = 0.25
-		roomDome.Parent = Workspace
-
-		local domeSize = math.max(14, splashRadius * 2.2) * effectScale
-		TweenService:Create(roomDome, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Size = Vector3.new(domeSize, domeSize, domeSize),
-			Transparency = 0.95,
-		}):Play()
-		task.delay(0.35, function()
-			if roomDome then roomDome:Destroy() end
-		end)
-	elseif style == "EnteiSun" then
-		-- ท่าของ Portgas D. Ace: ลูกบอลพระอาทิตย์เพลิงยักษ์ Dai Enkai: Entei พุ่งตกใส่เป้าหมาย
-		local sunBall = Instance.new("Part")
-		sunBall.Name = "AceEnteiSun"
-		sunBall.Shape = Enum.PartType.Ball
-		sunBall.Anchored = true
-		sunBall.CanCollide = false
-		sunBall.Material = Enum.Material.Neon
-		sunBall.Color = pColor
-		sunBall.Size = Vector3.new(7, 7, 7) * effectScale
-		sunBall.Position = originPos + Vector3.new(0, 8, 0)
-		sunBall.Parent = Workspace
-
-		TweenService:Create(sunBall, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Position = targetPos,
-			Size = Vector3.new(splashRadius * 2.1, splashRadius * 2.1, splashRadius * 2.1) * effectScale,
-			Transparency = 0.85,
-		}):Play()
-		task.delay(0.22, function()
-			if sunBall then sunBall:Destroy() end
-		end)
-	elseif style == "EnmaSlash" or style == "KamusariHaki" then
-		-- ท่าคลื่นดาบยักษ์ของ Zoro และ Shanks: จันทร์เสี้ยวคลื่นดาบ + เสาพายุหมุน
-		local crescent = Instance.new("Part")
-		crescent.Name = "HakiSwordSlashWave"
-		crescent.Anchored = true
-		crescent.CanCollide = false
-		crescent.Material = Enum.Material.Neon
-		crescent.Color = pColor
-		crescent.Size = Vector3.new(0.6, 8 * effectScale, 10 * effectScale)
-		if (targetPos - originPos).Magnitude >= 0.05 then
-			crescent.CFrame = CFrame.lookAt(originPos, targetPos)
-		else
-			crescent.CFrame = CFrame.new(originPos)
-		end
-		crescent.Parent = Workspace
-
-		local forwardPos = targetPos + (targetPos - originPos).Unit * 2
-		TweenService:Create(crescent, TweenInfo.new(0.22, Enum.EasingStyle.Linear), {
-			CFrame = CFrame.lookAt(targetPos, forwardPos) * CFrame.Angles(0, 0, math.rad(45)),
-			Size = Vector3.new(0.2, 12 * effectScale, 16 * effectScale),
-			Transparency = 1,
-		}):Play()
-		task.delay(0.25, function()
-			if crescent then crescent:Destroy() end
-		end)
-	end
-
-	-- ลำแสงหลักและวงแหวนคลื่นกระแทก (Shockwave Ring) ที่จุดปะทะสำหรับทุกตัวละคร
-	local dist = (targetPos - originPos).Magnitude
-	if dist >= 0.05 then
-		local beam = Instance.new("Part")
-		beam.Name = "OnePieceSignatureBeam"
-		beam.Anchored = true
-		beam.CanCollide = false
-		beam.Material = Enum.Material.Neon
-		beam.Color = pColor
-		beam.Size = Vector3.new(1.6 * effectScale, 1.6 * effectScale, dist)
-		beam.CFrame = CFrame.lookAt((originPos + targetPos) / 2, targetPos)
-		beam.Parent = Workspace
-
-		local shockRing = Instance.new("Part")
-		shockRing.Name = "HakiShockwave"
-		shockRing.Shape = Enum.PartType.Cylinder
-		shockRing.Anchored = true
-		shockRing.CanCollide = false
-		shockRing.Material = Enum.Material.Neon
-		shockRing.Color = sColor
-		shockRing.Size = Vector3.new(0.4, 3, 3)
-		shockRing.CFrame = CFrame.new(targetPos) * CFrame.Angles(0, 0, math.rad(90))
-		shockRing.Parent = Workspace
-
-		local endDiameter = math.max(10, splashRadius * 2.2) * effectScale
-		TweenService:Create(beam, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = Vector3.new(0.1, 0.1, dist),
-			Transparency = 1,
-		}):Play()
-
-		TweenService:Create(shockRing, TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-			Size = Vector3.new(0.1, endDiameter, endDiameter),
-			Transparency = 1,
-		}):Play()
-
-		task.delay(0.3, function()
-			if beam then beam:Destroy() end
-			if shockRing then shockRing:Destroy() end
-		end)
-	end
-end
-
--- 5. ฟังก์ชันปั้นหุ่น R6 ตัวละคร One Piece ทั้ง 6 ตัวพร้อมหมวกฟาง ดาบ 3 เล่ม และผ้าคลุม!
-local function buildOnePieceHeroR6(heroConfig: any, index: number, parentFolder: Folder)
-	local pos = heroConfig.Position
-	local towerModel = Instance.new("Model")
-	towerModel.Name = "OnePieceUnit_" .. index .. "_" .. heroConfig.Id
-
-	local function createPart(name: string, size: Vector3, color: Color3, mat: Enum.Material?): Part
-		local p = Instance.new("Part")
-		p.Name = name
-		p.Size = size
-		p.Color = color
-		p.Material = mat or Enum.Material.SmoothPlastic
-		p.Anchored = true
-		p.CanCollide = false
-		p.Parent = towerModel
-		return p
-	end
-
-	-- แท่นยืนหินอ่อนสลักทอง
-	local pedestal = createPart("Pedestal", Vector3.new(1.6, 6.5, 6.5), Color3.fromRGB(30, 32, 48), Enum.Material.Marble)
-	pedestal.Shape = Enum.PartType.Cylinder
-	pedestal.CFrame = CFrame.new(pos - Vector3.new(0, 2.2, 0)) * CFrame.Angles(0, 0, math.rad(90))
-
-	local skinColor = Color3.fromRGB(255, 220, 185)
-	local torso = createPart("Torso", Vector3.new(2, 2, 1), heroConfig.TorsoColor)
-	local head = createPart("Head", Vector3.new(1.25, 1.25, 1.25), skinColor)
-	local leftArm = createPart("LeftArm", Vector3.new(1, 2, 1), skinColor)
-	local rightArm = createPart("RightArm", Vector3.new(1, 2, 1), skinColor)
-	local leftLeg = createPart("LeftLeg", Vector3.new(1, 2, 1), heroConfig.LegsColor)
-	local rightLeg = createPart("RightLeg", Vector3.new(1, 2, 1), heroConfig.LegsColor)
-	local hair = createPart("Hair", Vector3.new(1.38, 0.65, 1.38), heroConfig.HairColor)
-
-	-- ลูกแก้ว/จุดปล่อยพลังประจำตัว
-	local orb = createPart("SpiritOrb", Vector3.new(1.4, 1.4, 1.4), heroConfig.PrimaryVFXColor, Enum.Material.Neon)
-	orb.Shape = Enum.PartType.Ball
-
-	-- สร้างเครื่องประดับและอาวุธเอกลักษณ์เฉพาะตัวละคร One Piece (เก็บ Offset สัมพัทธ์กับ Torso)
-	local accessories: { { Part: Part, Offset: CFrame } } = {}
-	local function addAccessory(name: string, size: Vector3, color: Color3, mat: Enum.Material, offsetCF: CFrame, shape: Enum.PartType?): Part
-		local acc = createPart(name, size, color, mat)
-		if shape then
-			acc.Shape = shape
-		end
-		table.insert(accessories, { Part = acc, Offset = offsetCF })
-		return acc
-	end
-
-	if heroConfig.Id == "Luffy" then
-		-- หมวกฟางลูฟี่ (ปีกหมวก + ตัวหมวก + แถบผ้าสีแดง + วงแหวนเมฆขาว Gear 5)
-		addAccessory("StrawHatBrim", Vector3.new(0.2, 2.8, 2.8), Color3.fromRGB(245, 205, 70), Enum.Material.Fabric, CFrame.new(0, 2.2, 0) * CFrame.Angles(0, 0, math.rad(90)), Enum.PartType.Cylinder)
-		addAccessory("StrawHatDome", Vector3.new(1.5, 1.5, 1.5), Color3.fromRGB(245, 205, 70), Enum.Material.Fabric, CFrame.new(0, 2.45, 0), Enum.PartType.Ball)
-		addAccessory("StrawHatRedRibbon", Vector3.new(0.25, 1.6, 1.6), Color3.fromRGB(220, 30, 40), Enum.Material.SmoothPlastic, CFrame.new(0, 2.3, 0) * CFrame.Angles(0, 0, math.rad(90)), Enum.PartType.Cylinder)
-		addAccessory("Gear5CloudScarf", Vector3.new(3.2, 3.2, 0.5), Color3.fromRGB(255, 255, 255), Enum.Material.Neon, CFrame.new(0, 1.2, 0.5))
-	elseif heroConfig.Id == "Zoro" then
-		-- ดาบ 3 เล่มของโซโล (คาบที่ปาก 1 เล่ม + ถือในมือซ้าย-ขวาอาบฮาคิสีม่วง-เขียว)
-		addAccessory("MouthKatanaWado", Vector3.new(3.8, 0.18, 0.25), Color3.fromRGB(255, 255, 255), Enum.Material.Neon, CFrame.new(0.6, 1.35, -0.75))
-		addAccessory("RightKatanaEnma", Vector3.new(0.2, 0.25, 4.2), Color3.fromRGB(185, 50, 255), Enum.Material.Neon, CFrame.new(1.6, 0.2, -1.8))
-		addAccessory("LeftKatanaSandai", Vector3.new(0.2, 0.25, 4.2), Color3.fromRGB(50, 255, 130), Enum.Material.Neon, CFrame.new(-1.6, 0.2, -1.8))
-	elseif heroConfig.Id == "Sanji" then
-		-- ขาขวาติดไฟสีฟ้า Ifrit Jambe + เนคไทสีทอง
-		addAccessory("GoldenTie", Vector3.new(0.35, 1.3, 0.15), Color3.fromRGB(255, 210, 50), Enum.Material.SmoothPlastic, CFrame.new(0, 0.2, -0.55))
-		addAccessory("IfritBlueFlameLeg", Vector3.new(1.35, 2.2, 1.35), Color3.fromRGB(0, 200, 255), Enum.Material.Neon, CFrame.new(0.55, -1.8, -0.2))
-	elseif heroConfig.Id == "Ace" then
-		-- หมวกคาวบอยสีส้มของเอส + สร้อยลูกปัดแดง + ลูกไฟบนมือ
-		addAccessory("AceOrangeHat", Vector3.new(0.25, 2.7, 2.7), Color3.fromRGB(240, 115, 30), Enum.Material.SmoothPlastic, CFrame.new(0, 2.2, 0) * CFrame.Angles(0, 0, math.rad(90)), Enum.PartType.Cylinder)
-		addAccessory("RedBeadNecklace", Vector3.new(1.5, 0.3, 1.3), Color3.fromRGB(220, 25, 35), Enum.Material.Neon, CFrame.new(0, 0.95, 0))
-	elseif heroConfig.Id == "Law" then
-		-- หมวกขนสัตว์สีขาวของลอว์ + ดาบยาว Kikoku
-		addAccessory("LawFurHat", Vector3.new(1.55, 1.1, 1.55), Color3.fromRGB(245, 245, 250), Enum.Material.SmoothPlastic, CFrame.new(0, 2.2, 0))
-		addAccessory("KikokuNodachi", Vector3.new(0.22, 5.2, 0.35), Color3.fromRGB(65, 225, 255), Enum.Material.Neon, CFrame.new(1.6, 0.8, -0.8) * CFrame.Angles(math.rad(35), 0, 0))
-	elseif heroConfig.Id == "Shanks" then
-		-- ผ้าคลุมไหล่จักรพรรดิสีดำ + ดาบ Gryphon อาบฮาคิราชันย์สีแดงทมิฬ
-		addAccessory("YonkoBlackCape", Vector3.new(2.8, 3.8, 0.35), Color3.fromRGB(20, 20, 28), Enum.Material.SmoothPlastic, CFrame.new(0, -0.4, 0.7) * CFrame.Angles(math.rad(12), 0, 0))
-		addAccessory("GryphonHakiSaber", Vector3.new(0.25, 0.35, 4.6), Color3.fromRGB(255, 20, 50), Enum.Material.Neon, CFrame.new(1.6, 0.3, -2.0))
-	end
-
-	-- วงแหวนแสดงระยะยิงบนพื้น
-	local initRange = GameConfig.INITIAL_PLAYER_STATS.RANGE_STAT
-	local rangeRing = createPart("RangeIndicator", Vector3.new(0.15, initRange * 2, initRange * 2), heroConfig.PrimaryVFXColor, Enum.Material.ForceField)
-	rangeRing.Shape = Enum.PartType.Cylinder
-	rangeRing.CFrame = CFrame.new(pos - Vector3.new(0, 2.8, 0)) * CFrame.Angles(0, 0, math.rad(90))
-	rangeRing.Transparency = 0.68
-
-	-- ออร่าตัวละคร
-	local aura = Instance.new("Highlight")
-	aura.Name = "AnimeAura"
-	aura.FillColor = heroConfig.PrimaryVFXColor
-	aura.OutlineColor = heroConfig.SecondaryVFXColor
-	aura.FillTransparency = 0.55
-	aura.Parent = towerModel
-
-	-- ป้ายชื่อตัวละคร One Piece และค่าพลัง
-	local bb = Instance.new("BillboardGui")
-	bb.Name = "TowerStatGui"
-	bb.Size = UDim2.new(0, 175, 0, 48)
-	bb.StudsOffset = Vector3.new(0, 3.8, 0)
-	bb.AlwaysOnTop = true
-	bb.Adornee = head
-	bb.Parent = towerModel
-
-	local titleLabel = Instance.new("TextLabel")
-	titleLabel.Name = "InfoText"
-	titleLabel.Size = UDim2.new(1, 0, 1, 0)
-	titleLabel.BackgroundTransparency = 1
-	titleLabel.Font = Enum.Font.GothamBlack
-	titleLabel.TextColor3 = heroConfig.PrimaryVFXColor
-	titleLabel.TextStrokeTransparency = 0.05
-	titleLabel.TextScaled = true
-	titleLabel.Text = string.format("%s\n%s", heroConfig.DisplayName, heroConfig.Title)
-	titleLabel.Parent = bb
-
-	local function orientR6Hero(lookTarget: Vector3)
-		local centerPos = pos + Vector3.new(0, 1.2, 0)
-		local flatTarget = Vector3.new(lookTarget.X, centerPos.Y, lookTarget.Z)
-		if (flatTarget - centerPos).Magnitude < 0.05 then
-			flatTarget = centerPos + Vector3.new(0, 0, -1)
-		end
-		local baseCF = CFrame.lookAt(centerPos, flatTarget)
-		torso.CFrame = baseCF
-		head.CFrame = baseCF * CFrame.new(0, 1.6, 0)
-		hair.CFrame = baseCF * CFrame.new(0, 2.05, 0)
-		leftArm.CFrame = baseCF * CFrame.new(-1.5, 0, -0.2) * CFrame.Angles(math.rad(25), 0, 0)
-		rightArm.CFrame = baseCF * CFrame.new(1.5, 0.2, -0.5) * CFrame.Angles(math.rad(75), 0, 0)
-		leftLeg.CFrame = baseCF * CFrame.new(-0.5, -2.0, 0)
-		rightLeg.CFrame = baseCF * CFrame.new(0.5, -2.0, 0)
-		orb.CFrame = baseCF * CFrame.new(0, 0.6, -2.4)
-
-		for _, item in ipairs(accessories) do
-			item.Part.CFrame = baseCF * item.Offset
-		end
-	end
-
-	orientR6Hero(pos + Vector3.new(0, 0, -10))
-	towerModel.PrimaryPart = torso
-	towerModel.Parent = parentFolder
-
-	return towerModel, orientR6Hero
-end
-
--- 6. โหมดสร้างหุ่นซ้อมอัตโนมัติ (เมื่อรันเทส Worktree ที่ 2 แยกเดี่ยวๆ)
-local function ensureTestDummyIfStandalone()
-	task.delay(3, function()
-		local enemiesFolder = Workspace:FindFirstChild(GameConfig.FOLDERS.ENEMIES)
-		if not enemiesFolder or #enemiesFolder:GetChildren() == 0 then
-			if not enemiesFolder then
-				enemiesFolder = Instance.new("Folder")
-				enemiesFolder.Name = GameConfig.FOLDERS.ENEMIES
-				enemiesFolder.Parent = Workspace
-			end
-
-			if not enemiesFolder:FindFirstChild("PacifistaTrainingDummy") then
-				local dummy = Instance.new("Model")
-				dummy.Name = "PacifistaTrainingDummy"
-
-				local root = Instance.new("Part")
-				root.Name = "HumanoidRootPart"
-				root.Size = Vector3.new(3, 5, 2)
-				root.Position = Vector3.new(-28, 3, -18)
-				root.Anchored = true
-				root.Color = Color3.fromRGB(200, 60, 60)
-				root.Parent = dummy
-
-				local hum = Instance.new("Humanoid")
-				hum.MaxHealth = 999999
-				hum.Health = 999999
-				hum.Parent = dummy
-
-				dummy.PrimaryPart = root
-				dummy.Parent = enemiesFolder
-
-				hum.HealthChanged:Connect(function(hp)
-					if hp < 100000 then
-						hum.Health = 999999
-					end
-				end)
-			end
-		end
-	end)
-end
-
--- 7. เริ่มสร้างทั้ง 6 ตัวละคร One Piece และรันลูปปล่อยพลัง
-local towersFolder = Workspace:FindFirstChild(GameConfig.FOLDERS.TOWERS)
+local towersFolder = Workspace:FindFirstChild("AnimeTowers") :: Folder?
 if not towersFolder then
 	towersFolder = Instance.new("Folder")
-	towersFolder.Name = GameConfig.FOLDERS.TOWERS
+	towersFolder.Name = "AnimeTowers"
 	towersFolder.Parent = Workspace
 else
 	towersFolder:ClearAllChildren()
 end
 
-ensureTestDummyIfStandalone()
+local padsFolder = Workspace:FindFirstChild("TowerPlacementPads") :: Folder?
+if not padsFolder then
+	padsFolder = Instance.new("Folder")
+	padsFolder.Name = "TowerPlacementPads"
+	padsFolder.Parent = Workspace
+end
 
-for idx, heroConfig in ipairs(ONE_PIECE_HEROES) do
-	local towerModel, orientR6Hero = buildOnePieceHeroR6(heroConfig, idx, towersFolder)
+local slotOccupants: { [string]: Model? } = {}
+local slotPadParts: { [string]: Part } = {}
+local lastAttackTime: { [Model]: number } = {}
 
-	task.spawn(function()
-		local torso = towerModel:WaitForChild("Torso") :: BasePart
-		local orb = towerModel:WaitForChild("SpiritOrb") :: BasePart
-		local rangeRing = towerModel:WaitForChild("RangeIndicator") :: BasePart
-		local infoText = towerModel:WaitForChild("TowerStatGui"):WaitForChild("InfoText") :: TextLabel
+-- =============================================================================
+-- RIGGING & PHYSICS CONSTRAINT HELPERS (F-01 WELDCONSTRAINTS)
+-- =============================================================================
 
-		while towerModel.Parent do
-			local dmg, range, cooldown, splashRadius, critChance = getCurrentCombatStats()
-			rangeRing.Size = Vector3.new(0.15, range * 2, range * 2)
-			infoText.Text = string.format(
-				"%s [%s]\nDMG: %d | AoE: %d | SPD: %.2fs",
-				heroConfig.DisplayName,
-				heroConfig.Id:upper(),
-				math.floor(dmg),
-				math.floor(splashRadius),
-				cooldown
-			)
+local function weldToRoot(childPart: BasePart, rootPart: BasePart): WeldConstraint
+	local weld = Instance.new("WeldConstraint")
+	weld.Name = childPart.Name .. "WeldConstraint"
+	weld.Part0 = rootPart
+	weld.Part1 = childPart
+	weld.Parent = childPart
+	childPart.Anchored = false
+	return weld
+end
 
-			local enemiesFolder = Workspace:FindFirstChild(GameConfig.FOLDERS.ENEMIES)
-			local nearestEnemy: Model? = nil
-			local shortestDist = range
+-- =============================================================================
+-- DATA LOOKUP & INVENTORY SERIALIZATION HELPERS
+-- =============================================================================
 
-			if enemiesFolder then
-				for _, enemy in ipairs(enemiesFolder:GetChildren()) do
-					if not enemy:IsA("Model") then
-						continue
-					end
-					local eRoot = enemy:FindFirstChild("HumanoidRootPart") :: BasePart?
-					local eHum = enemy:FindFirstChildOfClass("Humanoid")
-					if eRoot and eHum and eHum.Health > 0 then
-						local d = (eRoot.Position - torso.Position).Magnitude
-						if d <= shortestDist then
-							shortestDist = d
-							nearestEnemy = enemy
-						end
-					end
-				end
-			end
+local function getHeroSpec(heroId: string): any
+	for _, spec in ipairs(GameConfig.HERO_CATALOG) do
+		if spec.Id == heroId then
+			return spec
+		end
+	end
+	return GameConfig.HERO_CATALOG[1]
+end
 
-			if nearestEnemy then
-				local targetRoot = nearestEnemy:FindFirstChild("HumanoidRootPart") :: BasePart?
-				local targetHum = nearestEnemy:FindFirstChildOfClass("Humanoid")
-				if targetRoot and targetHum and targetHum.Health > 0 then
-					orientR6Hero(targetRoot.Position)
+local function decodeBag(player: Player): { BagUnit }
+	local raw = (player:GetAttribute(GameConfig.PLAYER_ATTRS.INVENTORY_JSON) :: string?) or "[]"
+	local ok, decoded = pcall(function()
+		return HttpService:JSONDecode(raw)
+	end)
+	if ok and type(decoded) == "table" then
+		return decoded :: { BagUnit }
+	end
+	return {}
+end
 
-					local isCrit = (math.random(1, 100) <= critChance)
-					local finalDamage = isCrit and math.floor(dmg * 2.0) or dmg
+local function encodeBag(player: Player, bag: { BagUnit })
+	local ok, encoded = pcall(function()
+		return HttpService:JSONEncode(bag)
+	end)
+	if ok then
+		player:SetAttribute(GameConfig.PLAYER_ATTRS.INVENTORY_JSON, encoded)
+	end
+end
 
-					playOnePieceUltimateVFX(heroConfig, orb.Position, targetRoot.Position, splashRadius, isCrit)
+local function rollWeightedHero(): any
+	local totalWeight = 0
+	for _, h in ipairs(GameConfig.HERO_CATALOG) do
+		totalWeight += h.Weight
+	end
+	local pick = math.random() * totalWeight
+	local cumulative = 0
+	for _, h in ipairs(GameConfig.HERO_CATALOG) do
+		cumulative += h.Weight
+		if pick <= cumulative then
+			return h
+		end
+	end
+	return GameConfig.HERO_CATALOG[1]
+end
 
-					if splashRadius > 0 and enemiesFolder then
-						for _, otherEnemy in ipairs(enemiesFolder:GetChildren()) do
-							if not otherEnemy:IsA("Model") then
-								continue
-							end
-							local oRoot = otherEnemy:FindFirstChild("HumanoidRootPart") :: BasePart?
-							local oHum = otherEnemy:FindFirstChildOfClass("Humanoid")
-							if oRoot and oHum and oHum.Health > 0 then
-								if (oRoot.Position - targetRoot.Position).Magnitude <= splashRadius then
-									oHum:TakeDamage(finalDamage)
-								end
-							end
-						end
-					else
-						targetHum:TakeDamage(finalDamage)
-					end
+local function recountPlayerTowers(player: Player)
+	local count = 0
+	for _, tower in ipairs((towersFolder :: Folder):GetChildren()) do
+		if tower:GetAttribute("OwnerUserId") == player.UserId then
+			count += 1
+		end
+	end
+	player:SetAttribute(GameConfig.PLAYER_ATTRS.PLACED_TOWERS_COUNT, count)
+end
 
-					task.wait(cooldown)
-				else
-					task.wait(0.1)
-				end
-			else
-				task.wait(0.15)
-			end
+local function updatePadVisual(slotId: string)
+	local pad = slotPadParts[slotId]
+	if not pad then
+		return
+	end
+	local occupant = slotOccupants[slotId]
+	local bb = pad:FindFirstChild("PadBillboard")
+	local lbl = bb and bb:FindFirstChild("Label") :: TextLabel?
+	if occupant and occupant.Parent then
+		pad.Color = Color3.fromRGB(255, 200, 50)
+		if lbl then
+			local heroId = (occupant:GetAttribute("HeroId") :: string?) or ""
+			local spec = getHeroSpec(heroId)
+			lbl.Text = string.format("%s\n[%s]\n(คลิกเพื่อสลับตัว/จัดการ)", slotId, spec.Name)
+		end
+	else
+		pad.Color = Color3.fromRGB(45, 235, 130)
+		if lbl then
+			lbl.Text = string.format("%s [EMPTY]\nคลิกเพื่อวางตัวละคร", slotId)
+		end
+	end
+end
+
+-- =============================================================================
+-- PROCEDURAL R6 RIG BUILDER & DISTINCT ONE PIECE HERO ACCESSORIES (F-01 RIGGED)
+-- =============================================================================
+
+local function buildDetailedOnePieceModel(
+	heroSpec: any,
+	slotPos: Vector3,
+	ownerUserId: number,
+	unitUid: string,
+	slotId: string
+): Model
+	local model = Instance.new("Model")
+	model.Name = heroSpec.Id .. "_" .. slotId
+	model:SetAttribute("HeroId", heroSpec.Id)
+	model:SetAttribute("UnitUid", unitUid)
+	model:SetAttribute("OwnerUserId", ownerUserId)
+	model:SetAttribute("SlotId", slotId)
+	model:SetAttribute("BaseY", slotPos.Y + 2.5)
+	model:SetAttribute("IsAttacking", false)
+
+	-- 1. HumanoidRootPart (Anchored = true, CanCollide = false)
+	local root = Instance.new("Part")
+	root.Name = "HumanoidRootPart"
+	root.Size = Vector3.new(2.2, 2.4, 1.2)
+	root.Position = slotPos + Vector3.new(0, 2.5, 0)
+	root.Anchored = true
+	root.CanCollide = false
+	root.Material = Enum.Material.SmoothPlastic
+	root.Color = heroSpec.PrimaryColor
+	root.Parent = model
+
+	-- 2. Peach Skin Head (Rigged via WeldConstraint to Root)
+	local head = Instance.new("Part")
+	head.Name = "Head"
+	head.Size = Vector3.new(1.5, 1.5, 1.5)
+	head.Position = root.Position + Vector3.new(0, 1.95, 0)
+	head.Anchored = true
+	head.CanCollide = false
+	head.Color = Color3.fromRGB(255, 222, 185)
+	head.Parent = model
+	weldToRoot(head, root)
+
+	-- 3. Right Arm (Signature Secondary Neon, Rigged to Root)
+	local rightArm = Instance.new("Part")
+	rightArm.Name = "RightArm"
+	rightArm.Size = Vector3.new(0.9, 2.2, 0.9)
+	rightArm.Position = root.Position + Vector3.new(1.55, 0, 0)
+	rightArm.Anchored = true
+	rightArm.CanCollide = false
+	rightArm.Material = Enum.Material.Neon
+	rightArm.Color = heroSpec.SecondaryColor
+	rightArm.Parent = model
+	weldToRoot(rightArm, root)
+
+	-- 4. Left Arm (Primary Color, Rigged to Root)
+	local leftArm = Instance.new("Part")
+	leftArm.Name = "LeftArm"
+	leftArm.Size = Vector3.new(0.9, 2.2, 0.9)
+	leftArm.Position = root.Position + Vector3.new(-1.55, 0, 0)
+	leftArm.Anchored = true
+	leftArm.CanCollide = false
+	leftArm.Color = heroSpec.PrimaryColor
+	leftArm.Parent = model
+	weldToRoot(leftArm, root)
+
+	-- 5. Continuous Rotating Neon Aura Ring at Base (Anchored to Pad)
+	local auraRing = Instance.new("Part")
+	auraRing.Name = "AuraRing"
+	auraRing.Shape = Enum.PartType.Cylinder
+	auraRing.Size = Vector3.new(0.35, 6.5, 6.5)
+	auraRing.CFrame = CFrame.new(slotPos + Vector3.new(0, 0.4, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	auraRing.Anchored = true
+	auraRing.CanCollide = false
+	auraRing.Material = Enum.Material.Neon
+	auraRing.Color = heroSpec.SecondaryColor
+	auraRing.Transparency = 0.35
+	auraRing.Parent = model
+
+	-- 6. Signature Weapon Tracking Right Arm (Rigged via WeldConstraint)
+	local weapon = Instance.new("Part")
+	weapon.Name = "SignatureWeapon"
+	weapon.Size = Vector3.new(0.4, 0.4, 4.8)
+	weapon.Position = rightArm.Position + Vector3.new(0, 0.5, -1.8)
+	weapon.Anchored = true
+	weapon.CanCollide = false
+	weapon.Material = Enum.Material.Neon
+	weapon.Color = heroSpec.SecondaryColor
+	weapon.Parent = model
+	weldToRoot(weapon, root)
+
+	-- 7. Highlight Aura Shell
+	local auraHighlight = Instance.new("Highlight")
+	auraHighlight.Name = "AnimeAura"
+	auraHighlight.FillColor = heroSpec.PrimaryColor
+	auraHighlight.OutlineColor = heroSpec.SecondaryColor
+	auraHighlight.FillTransparency = 0.55
+	auraHighlight.Parent = model
+
+	-- 8. Status BillboardGui on Head
+	local statusBb = Instance.new("BillboardGui")
+	statusBb.Name = "TowerStatusGui"
+	statusBb.Size = UDim2.fromOffset(180, 48)
+	statusBb.StudsOffset = Vector3.new(0, 4.2, 0)
+	statusBb.AlwaysOnTop = true
+	statusBb.Parent = head
+
+	local titleLbl = Instance.new("TextLabel")
+	titleLbl.Size = UDim2.fromScale(1, 1)
+	titleLbl.BackgroundTransparency = 0.25
+	titleLbl.BackgroundColor3 = Color3.fromRGB(12, 12, 20)
+	titleLbl.TextColor3 = heroSpec.PrimaryColor
+	titleLbl.Font = Enum.Font.GothamBlack
+	titleLbl.TextScaled = true
+	titleLbl.Text = string.format("[%s]\n%s", heroSpec.Rarity, heroSpec.Name)
+	titleLbl.Parent = statusBb
+
+	-- 9. Procedural Signature Accessories for each of the 8 One Piece Heroes (Rigged via WeldConstraint)
+	local style = heroSpec.AttackStyle
+
+	if style == "BajrangFist" then
+		-- Luffy: Floating Nika Cloud Scarf + Straw Hat
+		local cloudScarf = Instance.new("Part")
+		cloudScarf.Name = "Gear5CloudScarf"
+		cloudScarf.Size = Vector3.new(3.4, 0.6, 1.8)
+		cloudScarf.Position = root.Position + Vector3.new(0, 1.2, -0.6)
+		cloudScarf.Anchored = true
+		cloudScarf.CanCollide = false
+		cloudScarf.Material = Enum.Material.Neon
+		cloudScarf.Color = Color3.fromRGB(255, 255, 255)
+		cloudScarf.Parent = model
+		weldToRoot(cloudScarf, root)
+
+		local strawHat = Instance.new("Part")
+		strawHat.Name = "StrawHat"
+		strawHat.Shape = Enum.PartType.Cylinder
+		strawHat.Size = Vector3.new(0.2, 2.6, 2.6)
+		strawHat.CFrame = CFrame.new(root.Position + Vector3.new(0, 1.1, -0.9)) * CFrame.Angles(0, 0, math.rad(90))
+		strawHat.Anchored = true
+		strawHat.CanCollide = false
+		strawHat.Color = Color3.fromRGB(245, 205, 70)
+		strawHat.Parent = model
+		weldToRoot(strawHat, root)
+
+	elseif style == "Kamusari" then
+		-- Shanks: Charcoal Yonko Cape + Crimson Hair
+		local cape = Instance.new("Part")
+		cape.Name = "YonkoBlackCape"
+		cape.Size = Vector3.new(2.8, 3.8, 0.35)
+		cape.CFrame = CFrame.new(root.Position + Vector3.new(0, -0.2, -0.75)) * CFrame.Angles(math.rad(12), 0, 0)
+		cape.Anchored = true
+		cape.CanCollide = false
+		cape.Color = Color3.fromRGB(22, 22, 28)
+		cape.Parent = model
+		weldToRoot(cape, root)
+
+		local hair = Instance.new("Part")
+		hair.Name = "ShanksRedHair"
+		hair.Size = Vector3.new(1.6, 0.7, 1.6)
+		hair.Position = head.Position + Vector3.new(0, 0.5, 0)
+		hair.Anchored = true
+		hair.CanCollide = false
+		hair.Color = Color3.fromRGB(200, 25, 35)
+		hair.Parent = model
+		weldToRoot(hair, root)
+
+	elseif style == "GuraQuake" then
+		-- Whitebeard: Crescent Mustache + Broad Captain Coat
+		local mustache = Instance.new("Part")
+		mustache.Name = "CrescentMustache"
+		mustache.Size = Vector3.new(1.8, 0.35, 0.3)
+		mustache.Position = head.Position + Vector3.new(0, -0.2, 0.8)
+		mustache.Anchored = true
+		mustache.CanCollide = false
+		mustache.Material = Enum.Material.SmoothPlastic
+		mustache.Color = Color3.fromRGB(255, 255, 255)
+		mustache.Parent = model
+		weldToRoot(mustache, root)
+
+		local coat = Instance.new("Part")
+		coat.Name = "CaptainCoat"
+		coat.Size = Vector3.new(3.4, 4.2, 0.5)
+		coat.Position = root.Position + Vector3.new(0, -0.1, -0.8)
+		coat.Anchored = true
+		coat.CanCollide = false
+		coat.Color = Color3.fromRGB(240, 245, 255)
+		coat.Parent = model
+		weldToRoot(coat, root)
+
+	elseif style == "KingOfHell360" then
+		-- Zoro: Sandai Kitetsu & Wado Ichimonji on hips + Green Hair
+		local katanaLeft = Instance.new("Part")
+		katanaLeft.Name = "SandaiKitetsu"
+		katanaLeft.Size = Vector3.new(0.2, 0.25, 4.2)
+		katanaLeft.CFrame = CFrame.new(root.Position + Vector3.new(-1.25, -0.4, 0)) * CFrame.Angles(math.rad(25), 0, 0)
+		katanaLeft.Anchored = true
+		katanaLeft.CanCollide = false
+		katanaLeft.Color = Color3.fromRGB(180, 30, 40)
+		katanaLeft.Parent = model
+		weldToRoot(katanaLeft, root)
+
+		local zoroHair = Instance.new("Part")
+		zoroHair.Name = "ZoroHair"
+		zoroHair.Size = Vector3.new(1.6, 0.65, 1.6)
+		zoroHair.Position = head.Position + Vector3.new(0, 0.5, 0)
+		zoroHair.Anchored = true
+		zoroHair.CanCollide = false
+		zoroHair.Color = Color3.fromRGB(50, 210, 85)
+		zoroHair.Parent = model
+		weldToRoot(zoroHair, root)
+
+	elseif style == "Entei" then
+		-- Ace: Flame Cowboy Hat + Red Bead Necklace
+		local aceHat = Instance.new("Part")
+		aceHat.Name = "AceCowboyHat"
+		aceHat.Shape = Enum.PartType.Cylinder
+		aceHat.Size = Vector3.new(0.3, 2.8, 2.8)
+		aceHat.CFrame = CFrame.new(head.Position + Vector3.new(0, 0.75, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		aceHat.Anchored = true
+		aceHat.CanCollide = false
+		aceHat.Color = Color3.fromRGB(255, 115, 20)
+		aceHat.Parent = model
+		weldToRoot(aceHat, root)
+
+		local beads = Instance.new("Part")
+		beads.Name = "RedBeadNecklace"
+		beads.Size = Vector3.new(1.6, 0.25, 1.3)
+		beads.Position = head.Position + Vector3.new(0, -0.75, 0)
+		beads.Anchored = true
+		beads.CanCollide = false
+		beads.Material = Enum.Material.Neon
+		beads.Color = Color3.fromRGB(240, 25, 35)
+		beads.Parent = model
+		weldToRoot(beads, root)
+
+	elseif style == "GammaKnife" then
+		-- Law: Spotted Fur Hat
+		local furHat = Instance.new("Part")
+		furHat.Name = "LawFurHat"
+		furHat.Size = Vector3.new(1.55, 1.0, 1.55)
+		furHat.Position = head.Position + Vector3.new(0, 0.65, 0)
+		furHat.Anchored = true
+		furHat.CanCollide = false
+		furHat.Color = Color3.fromRGB(240, 240, 245)
+		furHat.Parent = model
+		weldToRoot(furHat, root)
+
+	elseif style == "YasakaniLight" then
+		-- Kizaru: Marine Justice Admiral Cape + Tinted Glasses
+		local justiceCape = Instance.new("Part")
+		justiceCape.Name = "JusticeCape"
+		justiceCape.Size = Vector3.new(3.0, 3.8, 0.4)
+		justiceCape.Position = root.Position + Vector3.new(0, -0.15, -0.8)
+		justiceCape.Anchored = true
+		justiceCape.CanCollide = false
+		justiceCape.Color = Color3.fromRGB(245, 245, 250)
+		justiceCape.Parent = model
+		weldToRoot(justiceCape, root)
+
+		local glasses = Instance.new("Part")
+		glasses.Name = "TintedGlasses"
+		glasses.Size = Vector3.new(1.1, 0.25, 0.35)
+		glasses.Position = head.Position + Vector3.new(0, 0.15, 0.8)
+		glasses.Anchored = true
+		glasses.CanCollide = false
+		glasses.Material = Enum.Material.Neon
+		glasses.Color = Color3.fromRGB(255, 215, 30)
+		glasses.Parent = model
+		weldToRoot(glasses, root)
+
+	elseif style == "BoeufBurst" then
+		-- Sanji: Sleek Blonde Hair + Golden Chest Tie
+		local blondeHair = Instance.new("Part")
+		blondeHair.Name = "BlondeHair"
+		blondeHair.Size = Vector3.new(1.55, 0.7, 1.55)
+		blondeHair.Position = head.Position + Vector3.new(0, 0.5, 0)
+		blondeHair.Anchored = true
+		blondeHair.CanCollide = false
+		blondeHair.Color = Color3.fromRGB(255, 220, 60)
+		blondeHair.Parent = model
+		weldToRoot(blondeHair, root)
+
+		local tie = Instance.new("Part")
+		tie.Name = "GoldenTie"
+		tie.Size = Vector3.new(0.35, 1.3, 0.15)
+		tie.Position = root.Position + Vector3.new(0, 0.35, 0.65)
+		tie.Anchored = true
+		tie.CanCollide = false
+		tie.Color = Color3.fromRGB(240, 205, 50)
+		tie.Parent = model
+		weldToRoot(tie, root)
+	end
+
+	-- Zero-Leak Garbage Collection Cleanup Guard (F-02)
+	model.Destroying:Connect(function()
+		lastAttackTime[model] = nil
+	end)
+
+	model.PrimaryPart = root
+	model.Parent = towersFolder
+	return model
+end
+
+-- =============================================================================
+-- 3D MANGA ONOMATOPOEIA BILLBOARD SYSTEM (GOTHAM BLACK & BACK.OUT TWEEN)
+-- =============================================================================
+
+local function spawnMangaBillboard(pos: Vector3, text: string, color: Color3)
+	local anchor = Instance.new("Part")
+	anchor.Name = "MangaBillboardAnchor"
+	anchor.Size = Vector3.new(1, 1, 1)
+	anchor.Position = pos + Vector3.new(0, 4, 0)
+	anchor.Anchored = true
+	anchor.CanCollide = false
+	anchor.Transparency = 1
+	anchor.Parent = Workspace
+
+	local bb = Instance.new("BillboardGui")
+	bb.Size = UDim2.fromOffset(240, 72)
+	bb.AlwaysOnTop = true
+	bb.LightInfluence = 0
+	bb.Parent = anchor
+
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.fromScale(1, 1)
+	lbl.BackgroundTransparency = 1
+	lbl.TextColor3 = color
+	lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+	lbl.TextStrokeTransparency = 0
+	lbl.Font = Enum.Font.GothamBlack
+	lbl.TextScaled = true
+	lbl.Text = text
+	lbl.Parent = bb
+
+	TweenService:Create(anchor, TweenInfo.new(0.85, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Position = pos + Vector3.new(0, 12, 0),
+	}):Play()
+
+	task.delay(0.45, function()
+		if lbl.Parent then
+			TweenService:Create(lbl, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				TextTransparency = 1,
+				TextStrokeTransparency = 1,
+			}):Play()
 		end
 	end)
+
+	Debris:AddItem(anchor, 0.95)
 end
+
+-- =============================================================================
+-- RADIAL CONQUEROR'S HAKI LIGHTNING BOLTS (JAGGED NEON ARCS)
+-- =============================================================================
+
+local function spawnHakiLightningBolts(origin: Vector3, color: Color3, boltCount: number)
+	for i = 1, boltCount do
+		local angle = math.rad((360 / boltCount) * i + math.random(-15, 15))
+		local boltLength = math.random(8, 16)
+		local offset = Vector3.new(math.cos(angle) * 5, math.random(1, 7), math.sin(angle) * 5)
+		local target = origin + offset
+
+		if (target - origin).Magnitude >= 0.05 then
+			local bolt = Instance.new("Part")
+			bolt.Name = "HakiLightningBolt"
+			bolt.Size = Vector3.new(0.45, 0.45, boltLength)
+			bolt.CFrame = CFrame.lookAt(origin, target) * CFrame.new(0, 0, -boltLength * 0.5)
+			bolt.Anchored = true
+			bolt.CanCollide = false
+			bolt.Material = Enum.Material.Neon
+			bolt.Color = color
+			bolt.Parent = Workspace
+
+			TweenService:Create(bolt, TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Transparency = 1,
+				Size = Vector3.new(0.05, 0.05, boltLength * 1.3),
+			}):Play()
+
+			Debris:AddItem(bolt, 0.35)
+		end
+	end
+end
+
+-- =============================================================================
+-- 8 SIGNATURE ONE PIECE ULTIMATE VFX IMPLEMENTATIONS (MASTERPIECE QUALITY)
+-- =============================================================================
+
+local function playOnePieceUltimateVFX(heroModel: Model, heroSpec: any, targetPos: Vector3)
+	local root = heroModel.PrimaryPart
+	if not root then
+		return
+	end
+	local style = heroSpec.AttackStyle
+	local startPos = root.Position
+
+	-- 1. Dynamic PointLight Injection
+	local impactLight = Instance.new("PointLight")
+	impactLight.Name = "ImpactFlashLight"
+	impactLight.Color = heroSpec.SecondaryColor
+	impactLight.Brightness = 8
+	impactLight.Range = 40
+	impactLight.Shadows = false
+
+	local lightAnchor = Instance.new("Part")
+	lightAnchor.Name = "LightAnchor"
+	lightAnchor.Size = Vector3.new(0.5, 0.5, 0.5)
+	lightAnchor.Position = targetPos + Vector3.new(0, 3, 0)
+	lightAnchor.Anchored = true
+	lightAnchor.CanCollide = false
+	lightAnchor.Transparency = 1
+	lightAnchor.Parent = Workspace
+	impactLight.Parent = lightAnchor
+
+	TweenService:Create(impactLight, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Brightness = 0,
+		Range = 0,
+	}):Play()
+	Debris:AddItem(lightAnchor, 0.40)
+
+	-- -------------------------------------------------------------------------
+	-- STYLE 1: BAJRANG FIST (MONKEY D. LUFFY - SUN GOD NIKA GEAR 5)
+	-- -------------------------------------------------------------------------
+	if style == "BajrangFist" then
+		local portal = Instance.new("Part")
+		portal.Name = "NikaSkyPortal"
+		portal.Shape = Enum.PartType.Cylinder
+		portal.Size = Vector3.new(1.2, 22, 22)
+		portal.CFrame = CFrame.new(targetPos + Vector3.new(0, 34, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		portal.Anchored = true
+		portal.CanCollide = false
+		portal.Material = Enum.Material.Neon
+		portal.Color = Color3.fromRGB(25, 20, 35)
+		portal.Parent = Workspace
+
+		local giantFist = Instance.new("Part")
+		giantFist.Name = "BajrangGiantFist"
+		giantFist.Shape = Enum.PartType.Ball
+		giantFist.Size = Vector3.new(14, 14, 14)
+		giantFist.Position = targetPos + Vector3.new(0, 34, 0)
+		giantFist.Anchored = true
+		giantFist.CanCollide = false
+		giantFist.Material = Enum.Material.Neon
+		giantFist.Color = Color3.fromRGB(255, 248, 255)
+		giantFist.Parent = Workspace
+
+		local shockwave = Instance.new("Part")
+		shockwave.Name = "BajrangShockwave"
+		shockwave.Shape = Enum.PartType.Cylinder
+		shockwave.Size = Vector3.new(0.5, 4, 4)
+		shockwave.CFrame = CFrame.new(targetPos + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		shockwave.Anchored = true
+		shockwave.CanCollide = false
+		shockwave.Material = Enum.Material.Neon
+		shockwave.Color = Color3.fromRGB(255, 45, 95)
+		shockwave.Parent = Workspace
+
+		TweenService:Create(portal, TweenInfo.new(0.35), {
+			Size = Vector3.new(0.1, 30, 30),
+			Transparency = 1,
+		}):Play()
+
+		TweenService:Create(giantFist, TweenInfo.new(0.28, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+			Position = targetPos + Vector3.new(0, 2, 0),
+			Color = Color3.fromRGB(255, 35, 85),
+		}):Play()
+
+		TweenService:Create(shockwave, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Size = Vector3.new(0.2, 34, 34),
+			Transparency = 1,
+		}):Play()
+
+		Debris:AddItem(portal, 0.45)
+		Debris:AddItem(giantFist, 0.55)
+		Debris:AddItem(shockwave, 0.45)
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(255, 20, 65), 12)
+
+	-- -------------------------------------------------------------------------
+	-- STYLE 2: KAMUSARI (RED-HAIRED SHANKS - DIVINE DEPARTURE)
+	-- -------------------------------------------------------------------------
+	elseif style == "Kamusari" then
+		local forwardDir = (targetPos - startPos).Unit
+		local crescent = Instance.new("Part")
+		crescent.Name = "KamusariCrescentSlash"
+		crescent.Size = Vector3.new(18, 1.4, 9)
+		crescent.CFrame = CFrame.lookAt(startPos, targetPos) * CFrame.Angles(0, 0, math.rad(35))
+		crescent.Anchored = true
+		crescent.CanCollide = false
+		crescent.Material = Enum.Material.Neon
+		crescent.Color = Color3.fromRGB(225, 20, 48)
+		crescent.Parent = Workspace
+
+		local destCF = CFrame.lookAt(targetPos + forwardDir * 10, targetPos + forwardDir * 18)
+			* CFrame.Angles(0, 0, math.rad(35))
+
+		TweenService:Create(crescent, TweenInfo.new(0.30, Enum.EasingStyle.Linear), {
+			CFrame = destCF,
+			Size = Vector3.new(28, 2.2, 14),
+			Transparency = 1,
+		}):Play()
+
+		local shockwave = Instance.new("Part")
+		shockwave.Name = "KamusariShockRing"
+		shockwave.Shape = Enum.PartType.Cylinder
+		shockwave.Size = Vector3.new(0.4, 4, 4)
+		shockwave.CFrame = CFrame.new(targetPos + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		shockwave.Anchored = true
+		shockwave.CanCollide = false
+		shockwave.Material = Enum.Material.Neon
+		shockwave.Color = Color3.fromRGB(235, 20, 50)
+		shockwave.Parent = Workspace
+
+		TweenService:Create(shockwave, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Size = Vector3.new(0.1, 28, 28),
+			Transparency = 1,
+		}):Play()
+
+		Debris:AddItem(crescent, 0.38)
+		Debris:AddItem(shockwave, 0.40)
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(255, 25, 55), 10)
+
+	-- -------------------------------------------------------------------------
+	-- STYLE 3: GURA QUAKE (EDWARD NEWGATE - WHITEBEARD)
+	-- -------------------------------------------------------------------------
+	elseif style == "GuraQuake" then
+		-- Mid-Air Glass Shatter Cracks (7 Fracture Beams)
+		for c = 1, 7 do
+			local crack = Instance.new("Part")
+			crack.Name = "TremorGlassCrack"
+			crack.Size = Vector3.new(0.35, 0.35, math.random(10, 18))
+			crack.CFrame = CFrame.new(targetPos + Vector3.new(0, 3.5, 0))
+				* CFrame.Angles(math.rad(math.random(-65, 65)), math.rad(c * 51), math.rad(math.random(-25, 25)))
+			crack.Anchored = true
+			crack.CanCollide = false
+			crack.Material = Enum.Material.Neon
+			crack.Color = Color3.fromRGB(245, 252, 255)
+			crack.Parent = Workspace
+
+			TweenService:Create(crack, TweenInfo.new(0.48), {
+				Transparency = 1,
+			}):Play()
+			Debris:AddItem(crack, 0.52)
+		end
+
+		-- Expanding Tremor ForceField Dome
+		local tremorDome = Instance.new("Part")
+		tremorDome.Name = "TremorDome"
+		tremorDome.Shape = Enum.PartType.Ball
+		tremorDome.Size = Vector3.new(4, 4, 4)
+		tremorDome.Position = targetPos
+		tremorDome.Anchored = true
+		tremorDome.CanCollide = false
+		tremorDome.Material = Enum.Material.ForceField
+		tremorDome.Color = Color3.fromRGB(110, 200, 255)
+		tremorDome.Transparency = 0.25
+		tremorDome.Parent = Workspace
+
+		TweenService:Create(tremorDome, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Size = Vector3.new(28, 28, 28),
+			Transparency = 1,
+		}):Play()
+
+		-- Ground Shockwave Ring
+		local seaRing = Instance.new("Part")
+		seaRing.Name = "SeaQuakeRing"
+		seaRing.Shape = Enum.PartType.Cylinder
+		seaRing.Size = Vector3.new(0.4, 4, 4)
+		seaRing.CFrame = CFrame.new(targetPos + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		seaRing.Anchored = true
+		seaRing.CanCollide = false
+		seaRing.Material = Enum.Material.Neon
+		seaRing.Color = Color3.fromRGB(110, 200, 255)
+		seaRing.Parent = Workspace
+
+		TweenService:Create(seaRing, TweenInfo.new(0.42, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Size = Vector3.new(0.1, 32, 32),
+			Transparency = 1,
+		}):Play()
+
+		Debris:AddItem(tremorDome, 0.48)
+		Debris:AddItem(seaRing, 0.48)
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(140, 220, 255), 8)
+
+	-- -------------------------------------------------------------------------
+	-- STYLE 4: KING OF HELL 360 (RORONOA ZORO - ENMA TORNADO)
+	-- -------------------------------------------------------------------------
+	elseif style == "KingOfHell360" then
+		local tornado = Instance.new("Part")
+		tornado.Name = "KingOfHellTornado"
+		tornado.Shape = Enum.PartType.Cylinder
+		tornado.Size = Vector3.new(18, 12, 12)
+		tornado.CFrame = CFrame.new(targetPos + Vector3.new(0, 6, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		tornado.Anchored = true
+		tornado.CanCollide = false
+		tornado.Material = Enum.Material.Neon
+		tornado.Color = Color3.fromRGB(40, 255, 120)
+		tornado.Transparency = 0.25
+		tornado.Parent = Workspace
+
+		TweenService:Create(tornado, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Size = Vector3.new(28, 22, 22),
+			Transparency = 1,
+		}):Play()
+
+		Debris:AddItem(tornado, 0.50)
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(165, 55, 255), 8)
+
+	-- -------------------------------------------------------------------------
+	-- STYLE 5: ENTEI (PORTGAS D. ACE - FLAME EMPEROR SUN)
+	-- -------------------------------------------------------------------------
+	elseif style == "Entei" then
+		local sunBall = Instance.new("Part")
+		sunBall.Name = "AceEnteiSun"
+		sunBall.Shape = Enum.PartType.Ball
+		sunBall.Size = Vector3.new(11, 11, 11)
+		sunBall.Position = startPos + Vector3.new(0, 14, 0)
+		sunBall.Anchored = true
+		sunBall.CanCollide = false
+		sunBall.Material = Enum.Material.Neon
+		sunBall.Color = Color3.fromRGB(255, 130, 20)
+		sunBall.Parent = Workspace
+
+		TweenService:Create(sunBall, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			Position = targetPos,
+			Size = Vector3.new(24, 24, 24),
+			Transparency = 0.85,
+		}):Play()
+
+		local fireShock = Instance.new("Part")
+		fireShock.Name = "EnteiFireShock"
+		fireShock.Shape = Enum.PartType.Cylinder
+		fireShock.Size = Vector3.new(0.5, 4, 4)
+		fireShock.CFrame = CFrame.new(targetPos + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		fireShock.Anchored = true
+		fireShock.CanCollide = false
+		fireShock.Material = Enum.Material.Neon
+		fireShock.Color = Color3.fromRGB(255, 225, 60)
+		fireShock.Parent = Workspace
+
+		TweenService:Create(fireShock, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Size = Vector3.new(0.1, 26, 26),
+			Transparency = 1,
+		}):Play()
+
+		Debris:AddItem(sunBall, 0.45)
+		Debris:AddItem(fireShock, 0.42)
+
+	-- -------------------------------------------------------------------------
+	-- STYLE 6: GAMMA KNIFE (TRAFALGAR LAW - K-ROOM)
+	-- -------------------------------------------------------------------------
+	elseif style == "GammaKnife" then
+		local roomDome = Instance.new("Part")
+		roomDome.Name = "KRoomSpatialDome"
+		roomDome.Shape = Enum.PartType.Ball
+		roomDome.Size = Vector3.new(4, 4, 4)
+		roomDome.Position = targetPos
+		roomDome.Anchored = true
+		roomDome.CanCollide = false
+		roomDome.Material = Enum.Material.ForceField
+		roomDome.Color = Color3.fromRGB(60, 220, 255)
+		roomDome.Transparency = 0.35
+		roomDome.Parent = Workspace
+
+		local giantSword = Instance.new("Part")
+		giantSword.Name = "PunctureWilleBlade"
+		giantSword.Size = Vector3.new(1.2, 28, 1.8)
+		giantSword.Position = targetPos + Vector3.new(0, 14, 0)
+		giantSword.Anchored = true
+		giantSword.CanCollide = false
+		giantSword.Material = Enum.Material.Neon
+		giantSword.Color = Color3.fromRGB(165, 255, 115)
+		giantSword.Parent = Workspace
+
+		TweenService:Create(roomDome, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Size = Vector3.new(26, 26, 26),
+			Transparency = 1,
+		}):Play()
+
+		TweenService:Create(giantSword, TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+			Position = targetPos - Vector3.new(0, 4, 0),
+			Transparency = 1,
+		}):Play()
+
+		Debris:AddItem(roomDome, 0.50)
+		Debris:AddItem(giantSword, 0.45)
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(60, 220, 255), 6)
+
+	-- -------------------------------------------------------------------------
+	-- STYLE 7: YASAKANI LIGHT (ADMIRAL KIZARU - BORSALINO)
+	-- -------------------------------------------------------------------------
+	elseif style == "YasakaniLight" then
+		local skyOrigin = startPos + Vector3.new(0, 24, 0)
+		for _ = 1, 10 do
+			local hitPos = targetPos + Vector3.new(math.random(-6, 6), 0, math.random(-6, 6))
+			local dist = (hitPos - skyOrigin).Magnitude
+			if dist >= 0.05 then
+				local beam = Instance.new("Part")
+				beam.Name = "YasakaniPhotonBeam"
+				beam.Size = Vector3.new(0.55, 0.55, dist)
+				beam.CFrame = CFrame.lookAt(skyOrigin, hitPos) * CFrame.new(0, 0, -dist * 0.5)
+				beam.Anchored = true
+				beam.CanCollide = false
+				beam.Material = Enum.Material.Neon
+				beam.Color = Color3.fromRGB(255, 240, 75)
+				beam.Parent = Workspace
+
+				TweenService:Create(beam, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+					Transparency = 1,
+					Size = Vector3.new(0.1, 0.1, dist),
+				}):Play()
+				Debris:AddItem(beam, 0.32)
+			end
+		end
+
+	-- -------------------------------------------------------------------------
+	-- STYLE 8: BOEUF BURST (VINSMOKE SANJI - IFRIT JAMBE)
+	-- -------------------------------------------------------------------------
+	elseif style == "BoeufBurst" then
+		local pillar = Instance.new("Part")
+		pillar.Name = "BoeufBurstPillar"
+		pillar.Shape = Enum.PartType.Cylinder
+		pillar.Size = Vector3.new(22, 9, 9)
+		pillar.CFrame = CFrame.new(targetPos + Vector3.new(0, 8, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		pillar.Anchored = true
+		pillar.CanCollide = false
+		pillar.Material = Enum.Material.Neon
+		pillar.Color = Color3.fromRGB(35, 155, 255)
+		pillar.Parent = Workspace
+
+		TweenService:Create(pillar, TweenInfo.new(0.40, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Size = Vector3.new(28, 18, 18),
+			Transparency = 1,
+		}):Play()
+
+		Debris:AddItem(pillar, 0.45)
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(220, 245, 255), 6)
+	end
+end
+
+-- =============================================================================
+-- 5-PHASE COMBAT KINEMATICS & HITSTOP ENGINE (F-01 UNIFIED RIG KINEMATICS)
+-- =============================================================================
+
+local function execute5PhaseAttack(
+	tower: Model,
+	heroSpec: any,
+	targetPos: Vector3,
+	onImpactCallback: () -> ()
+)
+	local root = tower.PrimaryPart
+	if not root then
+		return
+	end
+	local rightArm = tower:FindFirstChild("RightArm") :: BasePart?
+	local weapon = tower:FindFirstChild("SignatureWeapon") :: BasePart?
+	if not rightArm or not weapon then
+		return
+	end
+
+	tower:SetAttribute("IsAttacking", true)
+	local startPos = root.Position
+	local baseY = (tower:GetAttribute("BaseY") :: number?) or startPos.Y
+	local targetFlat = Vector3.new(targetPos.X, startPos.Y, targetPos.Z)
+	local fwdDiff = targetFlat - startPos
+	local fwdDir = (fwdDiff.Magnitude >= 0.05) and fwdDiff.Unit or Vector3.new(0, 0, -1)
+	local lookCF = CFrame.lookAt(startPos, startPos + fwdDir)
+
+	-- Phase 1: Wind-Up Anticipation (0.14s)
+	local windUpCF = lookCF * CFrame.Angles(math.rad(-14), 0, 0)
+	TweenService:Create(root, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = windUpCF }):Play()
+	TweenService:Create(rightArm, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Position = startPos + Vector3.new(0.4, 2.2, 0.6),
+	}):Play()
+	TweenService:Create(weapon, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Position = startPos + Vector3.new(0.4, 2.7, -1.2),
+	}):Play()
+
+	task.delay(0.14, function()
+		if not tower.Parent or not root.Parent then
+			return
+		end
+
+		-- Phase 2: Dash / Leap (0.10s)
+		local dashPos = startPos + fwdDir * 3.2
+		local dashCF = CFrame.lookAt(dashPos, dashPos + fwdDir) * CFrame.Angles(math.rad(18), 0, 0)
+		TweenService:Create(root, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), { CFrame = dashCF }):Play()
+		TweenService:Create(rightArm, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+			Position = dashPos + fwdDir * 1.8 + Vector3.new(0, 0.4, 0),
+		}):Play()
+		TweenService:Create(weapon, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+			Position = dashPos + fwdDir * 1.8 + Vector3.new(0, 0.9, -1.8),
+		}):Play()
+
+		task.delay(0.10, function()
+			if not tower.Parent or not root.Parent then
+				return
+			end
+
+			-- Phase 3: Hitstop / Freeze Frame (0.07s)
+			local shakeIntensity = 0.45
+			if heroSpec.AttackStyle == "BajrangFist" or heroSpec.AttackStyle == "Kamusari" or heroSpec.AttackStyle == "GuraQuake" then
+				shakeIntensity = 0.70
+			end
+			CameraShakeRemote:FireAllClients(shakeIntensity, heroSpec.SecondaryColor)
+			spawnMangaBillboard(targetPos, heroSpec.Onomatopoeia, heroSpec.PrimaryColor)
+			spawnHakiLightningBolts(targetPos, heroSpec.SecondaryColor, 8)
+
+			task.delay(0.07, function()
+				if not tower.Parent or not root.Parent then
+					return
+				end
+
+				-- Phase 4: Impact Strike & Follow-Through (0.20s)
+				onImpactCallback()
+
+				task.delay(0.20, function()
+					if not tower.Parent or not root.Parent then
+						return
+					end
+
+					-- Phase 5: Recoil & Return to Base Pad Position (0.22s)
+					local basePos = Vector3.new(startPos.X, baseY, startPos.Z)
+					local returnCF = CFrame.lookAt(basePos, basePos + fwdDir)
+					local returnArmPos = basePos + returnCF:VectorToWorldSpace(Vector3.new(1.55, 0, 0))
+					TweenService:Create(root, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = returnCF }):Play()
+					TweenService:Create(rightArm, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+						Position = returnArmPos,
+					}):Play()
+					TweenService:Create(weapon, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+						Position = returnArmPos + Vector3.new(0, 0.5, -1.8),
+					}):Play()
+
+					task.delay(0.22, function()
+						if tower.Parent and root.Parent and rightArm.Parent and weapon.Parent then
+							weapon.Position = rightArm.Position + Vector3.new(0, 0.5, -1.8)
+							tower:SetAttribute("IsAttacking", false)
+						end
+					end)
+				end)
+			end)
+		end)
+	end)
+end
+
+-- =============================================================================
+-- PAD SYSTEM & TACTICAL PLACEMENT MANAGEMENT (SWAP / STORE / SELL) (F-02 MEMORY CLEAN)
+-- =============================================================================
+
+local function placeOrSwapTowerOnSlot(player: Player, slotId: string, requestedUid: string?)
+	local bag = decodeBag(player)
+	local targetUid = requestedUid or (player:GetAttribute(GameConfig.PLAYER_ATTRS.SELECTED_BAG_UID) :: string?)
+	if (not targetUid or targetUid == "") and #bag > 0 then
+		targetUid = bag[1].Uid
+	end
+
+	local bagIndex: number? = nil
+	local chosenUnit: BagUnit? = nil
+	for idx, item in ipairs(bag) do
+		if item.Uid == targetUid then
+			bagIndex = idx
+			chosenUnit = item
+			break
+		end
+	end
+
+	if not chosenUnit or not bagIndex then
+		return
+	end
+
+	local existingTower = slotOccupants[slotId]
+	local maxTowers = (player:GetAttribute(GameConfig.PLAYER_ATTRS.MAX_PLACED_TOWERS) :: number?) or 4
+	local currentCount = (player:GetAttribute(GameConfig.PLAYER_ATTRS.PLACED_TOWERS_COUNT) :: number?) or 0
+
+	-- Cap verification: only enforced on empty pads
+	if not existingTower and currentCount >= maxTowers then
+		return
+	end
+
+	-- Remove chosen unit from bag
+	table.remove(bag, bagIndex)
+
+	-- Atomic Swap: If slot is occupied, pack existing tower back into bag
+	if existingTower and existingTower.Parent then
+		local prevHeroId = (existingTower:GetAttribute("HeroId") :: string?) or "Tower_Luffy_G5"
+		local prevUid = (existingTower:GetAttribute("UnitUid") :: string?) or HttpService:GenerateGUID(false)
+		local prevSpec = getHeroSpec(prevHeroId)
+		table.insert(bag, {
+			Uid = prevUid,
+			HeroId = prevSpec.Id,
+			Name = prevSpec.Name,
+			Rarity = prevSpec.Rarity,
+			SellValue = prevSpec.SellValue,
+		})
+		lastAttackTime[existingTower] = nil
+		existingTower:Destroy()
+		slotOccupants[slotId] = nil
+	end
+
+	encodeBag(player, bag)
+	if #bag > 0 then
+		player:SetAttribute(GameConfig.PLAYER_ATTRS.SELECTED_BAG_UID, bag[1].Uid)
+	else
+		player:SetAttribute(GameConfig.PLAYER_ATTRS.SELECTED_BAG_UID, "")
+	end
+
+	-- Find slot position
+	local slotSpec = GameConfig.PLACEMENT_SLOTS[1]
+	for _, s in ipairs(GameConfig.PLACEMENT_SLOTS) do
+		if s.SlotId == slotId then
+			slotSpec = s
+			break
+		end
+	end
+
+	local heroSpec = getHeroSpec(chosenUnit.HeroId)
+	local newModel = buildDetailedOnePieceModel(heroSpec, slotSpec.Position, player.UserId, chosenUnit.Uid, slotId)
+	slotOccupants[slotId] = newModel
+
+	spawnHakiLightningBolts(slotSpec.Position, heroSpec.SecondaryColor, 8)
+	spawnMangaBillboard(slotSpec.Position, "DEPLOY!! " .. heroSpec.Name, heroSpec.PrimaryColor)
+	updatePadVisual(slotId)
+	recountPlayerTowers(player)
+end
+
+local function storeTowerToBag(player: Player, slotId: string)
+	local existingTower = slotOccupants[slotId]
+	if not existingTower or not existingTower.Parent then
+		return
+	end
+	local prevHeroId = (existingTower:GetAttribute("HeroId") :: string?) or "Tower_Luffy_G5"
+	local prevUid = (existingTower:GetAttribute("UnitUid") :: string?) or HttpService:GenerateGUID(false)
+	local prevSpec = getHeroSpec(prevHeroId)
+
+	local bag = decodeBag(player)
+	table.insert(bag, {
+		Uid = prevUid,
+		HeroId = prevSpec.Id,
+		Name = prevSpec.Name,
+		Rarity = prevSpec.Rarity,
+		SellValue = prevSpec.SellValue,
+	})
+	encodeBag(player, bag)
+	player:SetAttribute(GameConfig.PLAYER_ATTRS.SELECTED_BAG_UID, prevUid)
+
+	lastAttackTime[existingTower] = nil
+	existingTower:Destroy()
+	slotOccupants[slotId] = nil
+	updatePadVisual(slotId)
+	recountPlayerTowers(player)
+end
+
+local function sellTowerUnit(player: Player, sourceType: string, targetKey: string)
+	local ls = player:FindFirstChild("leaderstats")
+	local cashVal = ls and ls:FindFirstChild("Cash") :: IntValue?
+
+	if sourceType == "Slot" then
+		local existingTower = slotOccupants[targetKey]
+		if not existingTower or not existingTower.Parent then
+			return
+		end
+		local heroId = (existingTower:GetAttribute("HeroId") :: string?) or "Tower_Luffy_G5"
+		local spec = getHeroSpec(heroId)
+		if cashVal then
+			cashVal.Value += spec.SellValue
+		end
+		if string.find(spec.Rarity, "MYTHICAL") then
+			local curTokens = (player:GetAttribute(GameConfig.PLAYER_ATTRS.REROLL_TOKENS) :: number?) or 0
+			player:SetAttribute(GameConfig.PLAYER_ATTRS.REROLL_TOKENS, curTokens + 1)
+		end
+		lastAttackTime[existingTower] = nil
+		existingTower:Destroy()
+		slotOccupants[targetKey] = nil
+		updatePadVisual(targetKey)
+		recountPlayerTowers(player)
+
+	elseif sourceType == "Bag" then
+		local bag = decodeBag(player)
+		for idx, item in ipairs(bag) do
+			if item.Uid == targetKey then
+				local spec = getHeroSpec(item.HeroId)
+				if cashVal then
+					cashVal.Value += spec.SellValue
+				end
+				if string.find(spec.Rarity, "MYTHICAL") then
+					local curTokens = (player:GetAttribute(GameConfig.PLAYER_ATTRS.REROLL_TOKENS) :: number?) or 0
+					player:SetAttribute(GameConfig.PLAYER_ATTRS.REROLL_TOKENS, curTokens + 1)
+				end
+				table.remove(bag, idx)
+				encodeBag(player, bag)
+				break
+			end
+		end
+	end
+end
+
+-- =============================================================================
+-- INITIALIZE 8 INTERACTIVE PLACEMENT PADS (0 TOWERS ON STARTUP)
+-- =============================================================================
+
+for _, slotSpec in ipairs(GameConfig.PLACEMENT_SLOTS) do
+	local pad = Instance.new("Part")
+	pad.Name = slotSpec.SlotId
+	pad.Shape = Enum.PartType.Cylinder
+	pad.Size = Vector3.new(0.8, 7.5, 7.5)
+	pad.CFrame = CFrame.new(slotSpec.Position) * CFrame.Angles(0, 0, math.rad(90))
+	pad.Anchored = true
+	pad.CanCollide = false
+	pad.Material = Enum.Material.Neon
+	pad.Color = Color3.fromRGB(45, 235, 130)
+	pad.Transparency = 0.2
+	pad.Parent = padsFolder
+
+	local bb = Instance.new("BillboardGui")
+	bb.Name = "PadBillboard"
+	bb.Size = UDim2.fromOffset(150, 42)
+	bb.StudsOffset = Vector3.new(0, 2.6, 0)
+	bb.AlwaysOnTop = true
+	bb.Parent = pad
+
+	local lbl = Instance.new("TextLabel")
+	lbl.Name = "Label"
+	lbl.Size = UDim2.fromScale(1, 1)
+	lbl.BackgroundTransparency = 0.35
+	lbl.BackgroundColor3 = Color3.fromRGB(10, 16, 24)
+	lbl.TextColor3 = Color3.fromRGB(220, 255, 230)
+	lbl.Font = Enum.Font.GothamBold
+	lbl.TextScaled = true
+	lbl.Text = string.format("%s [EMPTY]\nคลิกเพื่อวางตัวละคร", slotSpec.SlotId)
+	lbl.Parent = bb
+
+	local cd = Instance.new("ClickDetector")
+	cd.MaxActivationDistance = 120
+	cd.Parent = pad
+	cd.MouseClick:Connect(function(player: Player)
+		placeOrSwapTowerOnSlot(player, slotSpec.SlotId, nil)
+	end)
+
+	slotPadParts[slotSpec.SlotId] = pad
+end
+
+-- =============================================================================
+-- REMOTE EVENT LISTENERS: GACHA SUMMON, REROLL & PLACEMENT ACTIONS
+-- =============================================================================
+
+SummonRerollRemote.OnServerEvent:Connect(function(player: Player, mode: any)
+	if type(mode) ~= "string" then
+		return
+	end
+	local ls = player:FindFirstChild("leaderstats")
+	local cashVal = ls and ls:FindFirstChild("Cash") :: IntValue?
+	local freeTickets = (player:GetAttribute(GameConfig.PLAYER_ATTRS.FREE_SUMMON_TICKETS) :: number?) or 0
+	local rerollTokens = (player:GetAttribute(GameConfig.PLAYER_ATTRS.REROLL_TOKENS) :: number?) or 0
+	local bag = decodeBag(player)
+
+	if mode == "Summon" then
+		if freeTickets > 0 then
+			player:SetAttribute(GameConfig.PLAYER_ATTRS.FREE_SUMMON_TICKETS, freeTickets - 1)
+		elseif cashVal and cashVal.Value >= GameConfig.INITIAL_PLAYER_STATS.SUMMON_COST_CASH then
+			cashVal.Value -= GameConfig.INITIAL_PLAYER_STATS.SUMMON_COST_CASH
+		else
+			return
+		end
+
+		local rolledSpec = rollWeightedHero()
+		local newUid = HttpService:GenerateGUID(false)
+		table.insert(bag, {
+			Uid = newUid,
+			HeroId = rolledSpec.Id,
+			Name = rolledSpec.Name,
+			Rarity = rolledSpec.Rarity,
+			SellValue = rolledSpec.SellValue,
+		})
+		encodeBag(player, bag)
+		player:SetAttribute(GameConfig.PLAYER_ATTRS.LAST_ROLLED_HERO_ID, rolledSpec.Id)
+		player:SetAttribute(GameConfig.PLAYER_ATTRS.LAST_ROLLED_UNIT_UID, newUid)
+		player:SetAttribute(GameConfig.PLAYER_ATTRS.SELECTED_BAG_UID, newUid)
+
+	elseif mode == "Reroll" then
+		if rerollTokens > 0 then
+			player:SetAttribute(GameConfig.PLAYER_ATTRS.REROLL_TOKENS, rerollTokens - 1)
+		elseif cashVal and cashVal.Value >= GameConfig.INITIAL_PLAYER_STATS.REROLL_COST_CASH then
+			cashVal.Value -= GameConfig.INITIAL_PLAYER_STATS.REROLL_COST_CASH
+		else
+			return
+		end
+
+		local lastUid = (player:GetAttribute(GameConfig.PLAYER_ATTRS.LAST_ROLLED_UNIT_UID) :: string?) or ""
+		local rolledSpec = rollWeightedHero()
+		local replaced = false
+
+		for idx, item in ipairs(bag) do
+			if item.Uid == lastUid then
+				bag[idx] = {
+					Uid = lastUid,
+					HeroId = rolledSpec.Id,
+					Name = rolledSpec.Name,
+					Rarity = rolledSpec.Rarity,
+					SellValue = rolledSpec.SellValue,
+				}
+				replaced = true
+				break
+			end
+		end
+
+		if not replaced then
+			local newUid = HttpService:GenerateGUID(false)
+			table.insert(bag, {
+				Uid = newUid,
+				HeroId = rolledSpec.Id,
+				Name = rolledSpec.Name,
+				Rarity = rolledSpec.Rarity,
+				SellValue = rolledSpec.SellValue,
+			})
+			lastUid = newUid
+		end
+
+		encodeBag(player, bag)
+		player:SetAttribute(GameConfig.PLAYER_ATTRS.LAST_ROLLED_HERO_ID, rolledSpec.Id)
+		player:SetAttribute(GameConfig.PLAYER_ATTRS.LAST_ROLLED_UNIT_UID, lastUid)
+		player:SetAttribute(GameConfig.PLAYER_ATTRS.SELECTED_BAG_UID, lastUid)
+	end
+end)
+
+PlacementActionRemote.OnServerEvent:Connect(function(player: Player, actionType: any, arg1: any, arg2: any)
+	if type(actionType) ~= "string" then
+		return
+	end
+	if actionType == "SelectBagUnit" and type(arg1) == "string" then
+		player:SetAttribute(GameConfig.PLAYER_ATTRS.SELECTED_BAG_UID, arg1)
+	elseif actionType == "PlaceOrSwap" and type(arg1) == "string" then
+		local uid = (type(arg2) == "string") and arg2 or nil
+		placeOrSwapTowerOnSlot(player, arg1, uid)
+	elseif actionType == "StoreToBag" and type(arg1) == "string" then
+		storeTowerToBag(player, arg1)
+	elseif actionType == "SellFromSlot" and type(arg1) == "string" then
+		sellTowerUnit(player, "Slot", arg1)
+	elseif actionType == "SellFromBag" and type(arg1) == "string" then
+		sellTowerUnit(player, "Bag", arg1)
+	end
+end)
+
+-- =============================================================================
+-- CONTINUOUS IDLE BOBBING & AURA ROTATION LOOP (HEARTBEAT)
+-- =============================================================================
+
+RunService.Heartbeat:Connect(function()
+	local now = os.clock()
+	for _, tower in ipairs((towersFolder :: Folder):GetChildren()) do
+		if tower:IsA("Model") and tower.PrimaryPart then
+			local isAttacking = (tower:GetAttribute("IsAttacking") :: boolean?) or false
+			if not isAttacking then
+				local baseY = (tower:GetAttribute("BaseY") :: number?) or 5.5
+				local bob = math.sin(now * 3.2) * 0.35
+				local curPos = tower.PrimaryPart.Position
+				tower.PrimaryPart.Position = Vector3.new(curPos.X, baseY + bob, curPos.Z)
+
+				local head = tower:FindFirstChild("Head") :: BasePart?
+				if head then
+					head.Position = tower.PrimaryPart.Position + Vector3.new(0, 1.95, 0)
+				end
+
+				local rightArm = tower:FindFirstChild("RightArm") :: BasePart?
+				local weapon = tower:FindFirstChild("SignatureWeapon") :: BasePart?
+				if rightArm then
+					local armBob = math.sin(now * 3.2 + 0.4) * 0.08
+					rightArm.Position = tower.PrimaryPart.Position + Vector3.new(1.55, armBob, 0)
+					if weapon then
+						weapon.Position = rightArm.Position + Vector3.new(0, 0.5, -1.8)
+					end
+				end
+
+				local leftArm = tower:FindFirstChild("LeftArm") :: BasePart?
+				if leftArm then
+					local armBobLeft = math.sin(now * 3.2 - 0.4) * 0.08
+					leftArm.Position = tower.PrimaryPart.Position + Vector3.new(-1.55, armBobLeft, 0)
+				end
+			end
+
+			local ring = tower:FindFirstChild("AuraRing") :: BasePart?
+			if ring then
+				ring.CFrame = ring.CFrame * CFrame.Angles(math.rad(2.5), 0, 0)
+			end
+		end
+	end
+end)
+
+-- =============================================================================
+-- COMBAT TARGETING & DAMAGE RESOLUTION LOOP (F-03 FRESH ENEMY QUERY)
+-- =============================================================================
+
+task.spawn(function()
+	while true do
+		local now = os.clock()
+		local enemiesFolder = Workspace:FindFirstChild("Enemies")
+		local enemies = enemiesFolder and enemiesFolder:GetChildren() or {}
+
+		for _, tower in ipairs((towersFolder :: Folder):GetChildren()) do
+			if tower:IsA("Model") and tower.PrimaryPart then
+				local heroId = (tower:GetAttribute("HeroId") :: string?) or "Tower_Luffy_G5"
+				local ownerId = (tower:GetAttribute("OwnerUserId") :: number?) or 0
+				local owner = Players:GetPlayerByUserId(ownerId) or Players:GetPlayers()[1]
+				local spec = getHeroSpec(heroId)
+
+				local baseDmg = owner and (owner:GetAttribute(GameConfig.PLAYER_ATTRS.DAMAGE_STAT) :: number?) or 50
+				local baseRange = owner and (owner:GetAttribute(GameConfig.PLAYER_ATTRS.RANGE_STAT) :: number?) or 30
+				local baseCd = owner and (owner:GetAttribute(GameConfig.PLAYER_ATTRS.COOLDOWN_STAT) :: number?) or 1.15
+				local baseSplash = owner and (owner:GetAttribute(GameConfig.PLAYER_ATTRS.SPLASH_STAT) :: number?) or 7
+				local critChance = owner and (owner:GetAttribute(GameConfig.PLAYER_ATTRS.CRIT_CHANCE) :: number?) or 0.08
+				local critDmg = owner and (owner:GetAttribute(GameConfig.PLAYER_ATTRS.CRIT_DAMAGE) :: number?) or 2.0
+
+				local finalCooldown = math.max(0.15, baseCd * spec.CooldownMult)
+				local finalRange = baseRange + spec.RangeBonus
+				local finalSplash = baseSplash + spec.SplashBonus
+				local lastTime = lastAttackTime[tower] or 0
+
+				if (now - lastTime) >= finalCooldown then
+					local nearestEnemy: Model? = nil
+					local minDist = finalRange
+
+					for _, enemy in ipairs(enemies) do
+						if enemy:IsA("Model") and enemy.PrimaryPart and ((enemy:GetAttribute("HP") :: number?) or 0) > 0 then
+							local d = (enemy.PrimaryPart.Position - tower.PrimaryPart.Position).Magnitude
+							if d <= minDist then
+								minDist = d
+								nearestEnemy = enemy
+							end
+						end
+					end
+
+					if nearestEnemy and nearestEnemy.PrimaryPart then
+						lastAttackTime[tower] = now
+						local impactPos = nearestEnemy.PrimaryPart.Position
+
+						-- 5-Phase Attack Choreography with Hitstop & Impact VFX
+						execute5PhaseAttack(tower, spec, impactPos, function()
+							playOnePieceUltimateVFX(tower, spec, impactPos)
+
+							-- Critical & Splash Damage Resolution
+							local isCrit = (math.random() < math.clamp(critChance, 0, 0.95))
+							local dmg = math.floor(baseDmg * spec.DamageMult * (isCrit and critDmg or 1.0))
+
+							-- F-03: Fresh Active Enemies Query at exact moment of impact (0.31s post-targeting)
+							local now = os.clock()
+							local currentEnemiesFolder = Workspace:FindFirstChild("Enemies")
+							local currentEnemies = currentEnemiesFolder and currentEnemiesFolder:GetChildren() or {}
+
+							for _, enemy in ipairs(currentEnemies) do
+								if enemy:IsA("Model") and enemy.PrimaryPart and enemy.Parent and ((enemy:GetAttribute("HP") :: number?) or 0) > 0 then
+									local d = (enemy.PrimaryPart.Position - impactPos).Magnitude
+									if d <= finalSplash then
+										local curHp = (enemy:GetAttribute("HP") :: number?) or 0
+										enemy:SetAttribute("HP", math.max(0, curHp - dmg))
+
+										-- Whitebeard Gura Quake Slow Debuff (0.45x for 2.5s)
+										if spec.AttackStyle == "GuraQuake" then
+											enemy:SetAttribute("SlowUntil", now + 2.5)
+										end
+									end
+								end
+							end
+						end)
+					end
+				end
+			end
+		end
+
+		task.wait(0.08)
+	end
+end)

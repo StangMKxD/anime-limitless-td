@@ -1,65 +1,544 @@
+--!strict
 -- src/Shared/GameConfig.luau
--- สัญญาข้อมูลกลาง (Data Contract) สำหรับ One Piece Limitless TD (Wave Card Edition - Phase 2)
+-- Phase 3 Data Contract: Gacha Summon, Tactical Slot Placement, Bag/Sell, 8 One Piece Heroes & 12 Roguelike Cards
+
+-- =============================================================================
+-- EXPORTED STRICT LUAU TYPES
+-- =============================================================================
+
+export type HeroSpec = {
+	Id: string,
+	Name: string,
+	Subtitle: string,
+	Rarity: string,
+	Weight: number,
+	DamageMult: number,
+	RangeBonus: number,
+	CooldownMult: number,
+	SplashBonus: number,
+	SellValue: number,
+	AttackStyle: string,
+	Onomatopoeia: string,
+	PrimaryColor: Color3,
+	SecondaryColor: Color3,
+}
+
+export type SlotDef = {
+	SlotId: string,
+	Label: string,
+	Position: Vector3,
+}
+
+export type CardDef = {
+	Id: string,
+	Rarity: string,
+	Category: string,
+	Title: string,
+	Desc: string,
+	BorderColor: Color3,
+	BgColor: Color3,
+	DamagePct: number?,
+	DamageFlat: number?,
+	RangeFlat: number?,
+	CooldownMult: number?,
+	SplashFlat: number?,
+	CritChanceFlat: number?,
+	CritDamageFlat: number?,
+	BountyMultFlat: number?,
+	ExtraTowerSlot: number?,
+	InstantCash: number?,
+	BonusRerolls: number?,
+	BaseHeal: number?,
+}
+
+export type BagUnit = {
+	Uid: string,
+	HeroId: string,
+	Name: string,
+	Rarity: string,
+	SellValue: number,
+}
+
 local GameConfig = {}
 
--- ชื่อ Attribute บน Workspace
+-- =============================================================================
+-- WORKSPACE & PLAYER ATTRIBUTES CONTRACT
+-- =============================================================================
+
 GameConfig.WORKSPACE_ATTRS = {
 	CURRENT_WAVE = "CurrentWave",
+	WAVE_STATUS = "WaveStatus",
 	BASE_HP = "BaseHP",
 	MAX_BASE_HP = "MaxBaseHP",
 	ZOMBIES_REMAINING = "ZombiesRemaining",
 	GAME_OVER = "GameOver",
+	PENDING_CARD_DRAWS = "PendingCardDraws",
+	PREP_COUNTDOWN = "PrepCountdown",
 }
 
--- ชื่อ Attribute บนตัว Player (อัปเกรดผ่านการ์ดทุกเวฟได้ไร้ขีดจำกัด)
 GameConfig.PLAYER_ATTRS = {
 	DAMAGE_STAT = "DamageStat",
 	RANGE_STAT = "RangeStat",
 	COOLDOWN_STAT = "CooldownStat",
 	SPLASH_STAT = "SplashRadiusStat",
 	CRIT_CHANCE = "CritChanceStat",
+	CRIT_DAMAGE = "CritDamageStat",
+	BOUNTY_MULT = "BountyMultiplierStat",
 	DAMAGE_LEVEL = "DamageLevel",
 	RANGE_LEVEL = "RangeLevel",
 	SPEED_LEVEL = "SpeedLevel",
-	PENDING_CARD_DRAWS = "PendingCardDraws", -- จำนวนสิทธิ์เปิดการ์ดที่รอให้ผู้เล่นเลือก!
+	PENDING_CARD_DRAWS = "PendingCardDraws",
 	CARDS_PICKED_TOTAL = "CardsPickedTotal",
+	-- Phase 3 Gacha, Bag & Slot Attributes
+	REROLL_TOKENS = "RerollTokens",
+	FREE_SUMMON_TICKETS = "FreeSummonTickets",
+	MAX_PLACED_TOWERS = "MaxPlacedTowersStat",
+	PLACED_TOWERS_COUNT = "PlacedTowersCount",
+	INVENTORY_JSON = "HeroInventoryJson",
+	LAST_ROLLED_HERO_ID = "LastRolledHeroId",
+	LAST_ROLLED_UNIT_UID = "LastRolledUnitUid",
+	SELECTED_BAG_UID = "SelectedBagUnitUid",
 }
 
--- ค่าเริ่มต้นของผู้เล่น
+GameConfig.ATTRIBUTES = {
+	WORKSPACE = GameConfig.WORKSPACE_ATTRS,
+	PLAYER = GameConfig.PLAYER_ATTRS,
+	-- Direct workspace attribute aliases
+	CURRENT_WAVE = "CurrentWave",
+	WAVE_STATUS = "WaveStatus",
+	BASE_HP = "BaseHP",
+	MAX_BASE_HP = "MaxBaseHP",
+	ZOMBIES_REMAINING = "ZombiesRemaining",
+	GAME_OVER = "GameOver",
+	PENDING_CARD_DRAWS = "PendingCardDraws",
+	PREP_COUNTDOWN = "PrepCountdown",
+	-- Direct player attribute aliases
+	DAMAGE_STAT = "DamageStat",
+	RANGE_STAT = "RangeStat",
+	COOLDOWN_STAT = "CooldownStat",
+	SPLASH_STAT = "SplashRadiusStat",
+	CRIT_CHANCE = "CritChanceStat",
+	CRIT_DAMAGE = "CritDamageStat",
+	BOUNTY_MULT = "BountyMultiplierStat",
+	DAMAGE_LEVEL = "DamageLevel",
+	RANGE_LEVEL = "RangeLevel",
+	SPEED_LEVEL = "SpeedLevel",
+	CARDS_PICKED_TOTAL = "CardsPickedTotal",
+	REROLL_TOKENS = "RerollTokens",
+	FREE_SUMMON_TICKETS = "FreeSummonTickets",
+	MAX_PLACED_TOWERS = "MaxPlacedTowersStat",
+	PLACED_TOWERS_COUNT = "PlacedTowersCount",
+	INVENTORY_JSON = "HeroInventoryJson",
+	LAST_ROLLED_HERO_ID = "LastRolledHeroId",
+	LAST_ROLLED_UNIT_UID = "LastRolledUnitUid",
+	SELECTED_BAG_UID = "SelectedBagUnitUid",
+}
+
+-- =============================================================================
+-- INITIAL STATS & SYSTEM CONSTANTS
+-- =============================================================================
+
 GameConfig.INITIAL_PLAYER_STATS = {
-	CASH = 300, -- ค่าหัว (Bounty Belly) สำหรับรีโรลการ์ดหรือซื้อการ์ดพิเศษ
-	DAMAGE_STAT = 45,
-	RANGE_STAT = 36,
-	COOLDOWN_STAT = 0.95,
-	SPLASH_STAT = 6,
-	CRIT_CHANCE = 15, -- โอกาสติดคริติคอลฮาคิราชันย์ (%)
-	MIN_COOLDOWN = 0.12,
-	INITIAL_CARD_DRAWS = 1, -- เข้าเกมมาเวฟ 1 ได้เปิดการ์ดฟรีทันที 1 ใบ!
+	-- Canonical Phase 3 Contract
+	DAMAGE = 50,
+	RANGE = 30,
+	COOLDOWN = 1.15,
+	SPLASH_RADIUS = 7,
+	CRIT_CHANCE = 0.08,
+	CRIT_DAMAGE = 2.0,
+	BOUNTY_MULT = 1.0,
+	CASH = 500,
+	REROLL_TOKENS = 3,
+	FREE_SUMMON_TICKETS = 1,
+	MAX_PLACED_TOWERS = 4,
+	SUMMON_COST_CASH = 100,
+	REROLL_COST_CASH = 80,
+	MIN_COOLDOWN = 0.15,
+	MAX_CRIT_CHANCE = 0.95,
+	MAX_TOWERS_LIMIT = 8,
+	MAX_TOWER_CAP_LIMIT = 8,
+	INITIAL_CARD_DRAWS = 0,
+
+	-- Backward-compatibility & casing aliases
+	DAMAGE_STAT = 50,
+	RANGE_STAT = 30,
+	COOLDOWN_STAT = 1.15,
+	SPLASH_STAT = 7,
+	Cash = 500,
+	FreeSummonTickets = 1,
+	RerollTokens = 3,
+	MaxPlacedTowers = 4,
+	Damage = 50,
+	Range = 30,
+	Cooldown = 1.15,
+	SplashRadius = 7,
+	CritChance = 0.08,
+	CritDamage = 2.0,
+	BountyMultiplier = 1.0,
 }
 
--- ค่าเริ่มต้นของฐานและสูตรคูณเวฟซอมบี้ไร้ขีดจำกัด
+GameConfig.BASE_STATS = {
+	BASE_HP = 1000,
+	MAX_BASE_HP = 1000,
+	PREP_COUNTDOWN = 15,
+	MAX_WAVES = 15,
+	BaseHP = 1000,
+	MaxBaseHP = 1000,
+	PrepCountdown = 15,
+	MaxWaves = 15,
+}
+
 GameConfig.WAVE_SETTINGS = {
-	INITIAL_BASE_HP = 1500,
-	BASE_ZOMBIE_HP = 110,
-	HP_GROWTH_RATE = 1.30, -- เลือดซอมบี้คูณ 1.30 เท่าทุกเวฟ
+	INITIAL_BASE_HP = 1000,
+	BASE_ZOMBIE_HP = 120,
+	HP_GROWTH_RATE = 1.18,
 	BASE_ZOMBIE_SPEED = 10.5,
 	SPEED_INCREMENT_PER_WAVE = 0.25,
 	MAX_ZOMBIE_SPEED = 26,
 	BASE_CASH_REWARD = 35,
 	SPAWN_INTERVAL = 0.85,
 	INTERMISSION_TIME = 5,
-	EXTRA_CARD_BASE_COST = 150, -- ราคาใช้เงิน Bounty ซื้อสิทธิ์เปิดการ์ดเพิ่ม
+	PREP_COUNTDOWN = 15,
+	PrepCountdown = 15,
+	BOSS_WAVE_INTERVAL = 5,
+	MAX_WAVES = 15,
+	MaxWaves = 15,
+	EXTRA_CARD_BASE_COST = 150,
 }
 
--- ชื่อโฟลเดอร์และ RemoteEvent มาตรฐาน
+-- Standard Workspace Folders
 GameConfig.FOLDERS = {
 	WAYPOINTS = "Waypoints",
-	ENEMIES = "ActiveEnemies",
+	ENEMIES = "Enemies",
 	TOWERS = "AnimeTowers",
+	PADS = "TowerPlacementPads",
+	PLACEMENT_PADS = "TowerPlacementPads",
+	MAP = "GrandLineMap",
 }
 
+-- Standard RemoteEvents & RemoteFunctions
 GameConfig.REMOTES = {
-	UPGRADE_REQUEST = "UpgradeStatRequest", -- รับรหัสการ์ดที่ผู้เล่นคลิกเลือก หรือคำสั่งซื้อการ์ดเพิ่ม
+	UPGRADE_REQUEST = "UpgradeStatRequest",
+	CARD_DRAFT_SELECT = "CardDraftSelectRequest",
+	TOWER_SUMMON_REROLL = "TowerSummonRerollRequest",
+	TOWER_PLACEMENT_ACTION = "TowerPlacementActionRequest",
+	VFX_CAMERA_SHAKE = "VFXCameraShakeEvent",
+	-- Direct string aliases matching event names
+	UpgradeStatRequest = "UpgradeStatRequest",
+	CardDraftSelectRequest = "CardDraftSelectRequest",
+	TowerSummonRerollRequest = "TowerSummonRerollRequest",
+	TowerPlacementActionRequest = "TowerPlacementActionRequest",
+	VFXCameraShakeEvent = "VFXCameraShakeEvent",
 }
+
+-- =============================================================================
+-- 8 TACTICAL PLACEMENT SLOTS ALONG GRAND LINE MARINEFORD PATH
+-- =============================================================================
+
+GameConfig.PLACEMENT_SLOTS = {
+	{ SlotId = "Slot_1", Label = "PAD 1 [FRONT LEFT]", Position = Vector3.new(-42, 3, -28) },
+	{ SlotId = "Slot_2", Label = "PAD 2 [CENTER LEFT]", Position = Vector3.new(-10, 3, -28) },
+	{ SlotId = "Slot_3", Label = "PAD 3 [INNER TURN]", Position = Vector3.new(-34, 3, 0) },
+	{ SlotId = "Slot_4", Label = "PAD 4 [CENTER CORE]", Position = Vector3.new(0, 3, 6) },
+	{ SlotId = "Slot_5", Label = "PAD 5 [SOUTH BEND]", Position = Vector3.new(-10, 3, 34) },
+	{ SlotId = "Slot_6", Label = "PAD 6 [EAST BEND]", Position = Vector3.new(10, 3, 34) },
+	{ SlotId = "Slot_7", Label = "PAD 7 [EAST GUARD]", Position = Vector3.new(34, 3, 0) },
+	{ SlotId = "Slot_8", Label = "PAD 8 [BASE GUARD]", Position = Vector3.new(38, 3, -20) },
+} :: { SlotDef }
+
+-- =============================================================================
+-- 8 ICONIC ONE PIECE HERO TOWERS (WEIGHT SUM = 100)
+-- =============================================================================
+
+GameConfig.HERO_CATALOG = {
+	{
+		Id = "Tower_Luffy_G5",
+		Name = "MONKEY D. LUFFY",
+		Subtitle = "SUN GOD NIKA [GEAR 5]",
+		Rarity = "MYTHICAL YONKO",
+		Weight = 8,
+		DamageMult = 2.30,
+		RangeBonus = 6,
+		CooldownMult = 0.85,
+		SplashBonus = 5,
+		SellValue = 480,
+		AttackStyle = "BajrangFist",
+		Onomatopoeia = "DOOM!! (หมัดเทพนิกะ!!)",
+		PrimaryColor = Color3.fromRGB(255, 250, 255),
+		SecondaryColor = Color3.fromRGB(255, 45, 95),
+	},
+	{
+		Id = "Tower_Shanks_Kamusari",
+		Name = "RED-HAIRED SHANKS",
+		Subtitle = "EMPEROR [KAMUSARI]",
+		Rarity = "MYTHICAL YONKO",
+		Weight = 7,
+		DamageMult = 2.50,
+		RangeBonus = 10,
+		CooldownMult = 0.90,
+		SplashBonus = 4,
+		SellValue = 500,
+		AttackStyle = "Kamusari",
+		Onomatopoeia = "KAMUSARI!! (เทวะอาสัญ!!)",
+		PrimaryColor = Color3.fromRGB(220, 25, 45),
+		SecondaryColor = Color3.fromRGB(25, 10, 15),
+	},
+	{
+		Id = "Tower_Whitebeard_Gura",
+		Name = "EDWARD NEWGATE",
+		Subtitle = "WHITEBEARD [GURA GURA]",
+		Rarity = "MYTHICAL YONKO",
+		Weight = 7,
+		DamageMult = 2.60,
+		RangeBonus = 8,
+		CooldownMult = 1.10,
+		SplashBonus = 8,
+		SellValue = 500,
+		AttackStyle = "GuraQuake",
+		Onomatopoeia = "CRACK!! (สั่นสะเทือนโลกา!!)",
+		PrimaryColor = Color3.fromRGB(240, 248, 255),
+		SecondaryColor = Color3.fromRGB(110, 200, 255),
+	},
+	{
+		Id = "Tower_Zoro_KingOfHell",
+		Name = "RORONOA ZORO",
+		Subtitle = "KING OF HELL [ENMA]",
+		Rarity = "LEGENDARY HAKI",
+		Weight = 14,
+		DamageMult = 1.75,
+		RangeBonus = 2,
+		CooldownMult = 0.80,
+		SplashBonus = 3,
+		SellValue = 260,
+		AttackStyle = "KingOfHell360",
+		Onomatopoeia = "ONIGIRI!! (ราชานรก!!)",
+		PrimaryColor = Color3.fromRGB(40, 235, 115),
+		SecondaryColor = Color3.fromRGB(165, 55, 255),
+	},
+	{
+		Id = "Tower_Ace_Entei",
+		Name = "PORTGAS D. ACE",
+		Subtitle = "FLAME EMPEROR [ENTEI]",
+		Rarity = "LEGENDARY HAKI",
+		Weight = 14,
+		DamageMult = 1.80,
+		RangeBonus = 8,
+		CooldownMult = 0.95,
+		SplashBonus = 6,
+		SellValue = 250,
+		AttackStyle = "Entei",
+		Onomatopoeia = "ENTEI!! (มหาจักรพรรดิอัคคี!!)",
+		PrimaryColor = Color3.fromRGB(255, 115, 20),
+		SecondaryColor = Color3.fromRGB(255, 225, 60),
+	},
+	{
+		Id = "Tower_Law_KRoom",
+		Name = "TRAFALGAR LAW",
+		Subtitle = "SURGEON OF DEATH [K-ROOM]",
+		Rarity = "LEGENDARY HAKI",
+		Weight = 14,
+		DamageMult = 1.70,
+		RangeBonus = 12,
+		CooldownMult = 0.88,
+		SplashBonus = 4,
+		SellValue = 260,
+		AttackStyle = "GammaKnife",
+		Onomatopoeia = "K-ROOM!! (พังก์เจอร์ วิลเล!!)",
+		PrimaryColor = Color3.fromRGB(65, 215, 255),
+		SecondaryColor = Color3.fromRGB(170, 255, 120),
+	},
+	{
+		Id = "Tower_Kizaru_Pika",
+		Name = "ADMIRAL KIZARU",
+		Subtitle = "BORSALINO [PIKA PIKA]",
+		Rarity = "LEGENDARY HAKI",
+		Weight = 14,
+		DamageMult = 1.65,
+		RangeBonus = 16,
+		CooldownMult = 0.72,
+		SplashBonus = 4,
+		SellValue = 270,
+		AttackStyle = "YasakaniLight",
+		Onomatopoeia = "FLASH!! (ลำแสงความเร็วแสง!!)",
+		PrimaryColor = Color3.fromRGB(255, 240, 75),
+		SecondaryColor = Color3.fromRGB(255, 195, 25),
+	},
+	{
+		Id = "Tower_Sanji_Ifrit",
+		Name = "VINSMOKE SANJI",
+		Subtitle = "IFRIT JAMBE [BLUE FLAME]",
+		Rarity = "EPIC HAKI",
+		Weight = 22,
+		DamageMult = 1.45,
+		RangeBonus = 0,
+		CooldownMult = 0.68,
+		SplashBonus = 2,
+		SellValue = 140,
+		AttackStyle = "BoeufBurst",
+		Onomatopoeia = "IFRIT!! (ลูกเตะเพลิงสีคราม!!)",
+		PrimaryColor = Color3.fromRGB(35, 145, 255),
+		SecondaryColor = Color3.fromRGB(220, 245, 255),
+	},
+} :: { HeroSpec }
+
+-- =============================================================================
+-- 12 DIVERSE ROGUELIKE WAVE-CLEAR CARDS
+-- =============================================================================
+
+GameConfig.CARD_POOL = {
+	{
+		Id = "Card_Gear5Nika",
+		Rarity = "MYTHICAL YONKO",
+		Category = "ALL-OUT OFFENSE",
+		Title = "SUN GOD NIKA: GEAR 5 AWAKENING",
+		Desc = "+85% GLOBAL DAMAGE (+50 Flat)\n-15% ATTACK COOLDOWN | +3 AOE RADIUS",
+		BorderColor = Color3.fromRGB(255, 55, 95),
+		BgColor = Color3.fromRGB(60, 16, 32),
+		DamagePct = 0.85,
+		DamageFlat = 50,
+		CooldownMult = 0.85,
+		SplashFlat = 3,
+	},
+	{
+		Id = "Card_GrandFleetCommand",
+		Rarity = "MYTHICAL SYNERGY",
+		Category = "FLEET COMMAND & ALL-STATS",
+		Title = "STRAW HAT GRAND FLEET ALLIANCE",
+		Desc = "+1 MAX PLACED TOWER SLOT\n+35% DAMAGE | +6 RANGE | -12% COOLDOWN | +6% CRIT",
+		BorderColor = Color3.fromRGB(255, 215, 65),
+		BgColor = Color3.fromRGB(55, 42, 12),
+		ExtraTowerSlot = 1,
+		DamagePct = 0.35,
+		DamageFlat = 20,
+		RangeFlat = 6,
+		CooldownMult = 0.88,
+		CritChanceFlat = 0.06,
+	},
+	{
+		Id = "Card_DevilFruitAwakening",
+		Rarity = "MYTHICAL YONKO",
+		Category = "SUPREME AOE CATACLYSM",
+		Title = "DEVIL FRUIT AWAKENING: MASTERY",
+		Desc = "+6 STUDS SPLASH AOE RADIUS\n+55% GLOBAL DAMAGE (+35 Flat) | -10% COOLDOWN",
+		BorderColor = Color3.fromRGB(230, 65, 255),
+		BgColor = Color3.fromRGB(48, 15, 60),
+		SplashFlat = 6,
+		DamagePct = 0.55,
+		DamageFlat = 35,
+		CooldownMult = 0.90,
+	},
+	{
+		Id = "Card_KingOfHellAsura",
+		Rarity = "MYTHICAL CRIT",
+		Category = "LETHAL HAKI CRITICAL",
+		Title = "NINE-SWORD STYLE: ASURA DEMON AURA",
+		Desc = "+15% CRITICAL CHANCE | +0.85x CRIT DAMAGE\n+40% GLOBAL DAMAGE (+25 Flat)",
+		BorderColor = Color3.fromRGB(50, 255, 130),
+		BgColor = Color3.fromRGB(15, 50, 30),
+		CritChanceFlat = 0.15,
+		CritDamageFlat = 0.85,
+		DamagePct = 0.40,
+		DamageFlat = 25,
+	},
+	{
+		Id = "Card_ConquerorHaki",
+		Rarity = "LEGENDARY HAKI",
+		Category = "SUPREME KING POWER",
+		Title = "CONQUEROR'S HAKI: SUPREME KING",
+		Desc = "+45% GLOBAL DAMAGE (+25 Flat)\n+8% CRITICAL CHANCE | +0.25x CRIT DAMAGE",
+		BorderColor = Color3.fromRGB(255, 195, 40),
+		BgColor = Color3.fromRGB(55, 35, 15),
+		DamagePct = 0.45,
+		DamageFlat = 25,
+		CritChanceFlat = 0.08,
+		CritDamageFlat = 0.25,
+	},
+	{
+		Id = "Card_GuraQuakeResonance",
+		Rarity = "LEGENDARY AOE",
+		Category = "TREMOR SHOCKWAVE",
+		Title = "TREMOR-TREMOR SEA QUAKE RESONANCE",
+		Desc = "+5 STUDS SPLASH AOE RADIUS\n+35% GLOBAL DAMAGE (+30 Flat)",
+		BorderColor = Color3.fromRGB(95, 210, 255),
+		BgColor = Color3.fromRGB(18, 42, 60),
+		SplashFlat = 5,
+		DamagePct = 0.35,
+		DamageFlat = 30,
+	},
+	{
+		Id = "Card_PikaLightSpeed",
+		Rarity = "LEGENDARY SPEED",
+		Category = "HYPER ATTACK SPEED",
+		Title = "GLINT-GLINT LIGHT SPEED REFLEXES",
+		Desc = "-22% ATTACK COOLDOWN (HYPER SPEED)\n+5 STUDS GLOBAL RANGE",
+		BorderColor = Color3.fromRGB(255, 240, 80),
+		BgColor = Color3.fromRGB(55, 50, 15),
+		CooldownMult = 0.78,
+		RangeFlat = 5,
+	},
+	{
+		Id = "Card_YonkoBounty",
+		Rarity = "LEGENDARY ECONOMY",
+		Category = "BOUNTY & REROLL ENGINE",
+		Title = "CROSS GUILD & YONKO BOUNTY HUNTER",
+		Desc = "+40% WAVE & KILL CASH MULTIPLIER\n+$350 INSTANT CASH | +2 REROLL TOKENS",
+		BorderColor = Color3.fromRGB(255, 170, 30),
+		BgColor = Color3.fromRGB(50, 32, 10),
+		BountyMultFlat = 0.40,
+		InstantCash = 350,
+		BonusRerolls = 2,
+	},
+	{
+		Id = "Card_ObservationHaki",
+		Rarity = "EPIC HAKI",
+		Category = "SNIPER PRECISION",
+		Title = "OBSERVATION HAKI: FUTURE SIGHT",
+		Desc = "+8 STUDS GLOBAL RANGE\n-10% ATTACK COOLDOWN | +5% CRIT CHANCE",
+		BorderColor = Color3.fromRGB(175, 85, 255),
+		BgColor = Color3.fromRGB(38, 20, 58),
+		RangeFlat = 8,
+		CooldownMult = 0.90,
+		CritChanceFlat = 0.05,
+	},
+	{
+		Id = "Card_ArmamentRyou",
+		Rarity = "EPIC HAKI",
+		Category = "INTERNAL DESTRUCTION",
+		Title = "ADVANCED ARMAMENT: INTERNAL RYOU",
+		Desc = "+30% GLOBAL DAMAGE (+20 Flat)\n+0.50x CRIT DAMAGE | +2 AOE RADIUS",
+		BorderColor = Color3.fromRGB(255, 95, 60),
+		BgColor = Color3.fromRGB(52, 22, 18),
+		DamagePct = 0.30,
+		DamageFlat = 20,
+		CritDamageFlat = 0.50,
+		SplashFlat = 2,
+	},
+	{
+		Id = "Card_PoneglyphWisdom",
+		Rarity = "EPIC UTILITY",
+		Category = "FORTRESS & GLOBAL BUFF",
+		Title = "ANCIENT PONEGLYPH INSCRIPTION",
+		Desc = "HEAL +250 BASE HP (+250 MAX BASE HP)\n+20% GLOBAL DAMAGE | +4 STUDS RANGE",
+		BorderColor = Color3.fromRGB(80, 235, 210),
+		BgColor = Color3.fromRGB(16, 48, 46),
+		BaseHeal = 250,
+		DamagePct = 0.20,
+		DamageFlat = 15,
+		RangeFlat = 4,
+	},
+	{
+		Id = "Card_ShandoraGold",
+		Rarity = "EPIC GACHA",
+		Category = "TREASURE & REROLLS",
+		Title = "CITY OF GOLD SHANDORA TREASURE",
+		Desc = "+$600 INSTANT CASH | +4 REROLL TOKENS\n+15% GLOBAL DAMAGE",
+		BorderColor = Color3.fromRGB(255, 225, 90),
+		BgColor = Color3.fromRGB(48, 42, 14),
+		InstantCash = 600,
+		BonusRerolls = 4,
+		DamagePct = 0.15,
+		DamageFlat = 10,
+	},
+} :: { CardDef }
 
 return GameConfig
