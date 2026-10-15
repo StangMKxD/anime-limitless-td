@@ -1,0 +1,15 @@
+# Roblox place and binary files
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+
+# Rojo and local files
+.rojo/
+*.tmp
+
+# AI Agent runtime artifacts
+.agents/
+
+# AI & Agent artifacts
+.agents/
