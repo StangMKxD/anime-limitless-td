@@ -1,7 +1,7 @@
 --!strict
 -- src/Track2_TowerSystem/TowerController.server.luau
--- Anime Limitless Tower Defense: Track 2 Anime Hero Towers & Combat System
--- Auto-spawn hero units, real-time stat synchronization, procedural VFX, and 4-tier evolution.
+-- Anime Limitless Tower Defense (Phase 2): 6 Legendary One Piece R6 Heroes & Signature Ultimate VFX
+-- Procedural R6 Rigs: Luffy (Gear 5), Zoro (King of Hell), Sanji (Ifrit Jambe), Ace (Entei), Law (K-ROOM), Shanks (Kamusari)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,247 +10,408 @@ local Workspace = game:GetService("Workspace")
 
 local GameConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GameConfig"))
 
-type EvolutionTier = {
-	Name: string,
-	Color: Color3,
-	SecondaryColor: Color3,
-	SplashRadius: number,
-	BeamWidth: number,
+-- 1. ข้อมูลตัวละคร One Piece ทั้ง 6 ตัว (สีชุด อาวุธ และสีท่าไม้ตาย)
+local ONE_PIECE_HEROES = {
+	{
+		Id = "Luffy",
+		DisplayName = "MONKEY D. LUFFY",
+		Title = "SUN GOD NIKA [GEAR 5]",
+		Position = Vector3.new(-42, 3, -28),
+		TorsoColor = Color3.fromRGB(210, 35, 45),
+		LegsColor = Color3.fromRGB(40, 85, 175),
+		HairColor = Color3.fromRGB(20, 20, 25),
+		PrimaryVFXColor = Color3.fromRGB(255, 40, 75),
+		SecondaryVFXColor = Color3.fromRGB(255, 255, 255),
+		AttackStyle = "BajrangFist",
+	},
+	{
+		Id = "Zoro",
+		DisplayName = "RORONOA ZORO",
+		Title = "KING OF HELL [ENMA]",
+		Position = Vector3.new(-32, 3, -8),
+		TorsoColor = Color3.fromRGB(30, 105, 55),
+		LegsColor = Color3.fromRGB(25, 30, 35),
+		HairColor = Color3.fromRGB(60, 210, 95),
+		PrimaryVFXColor = Color3.fromRGB(50, 255, 130),
+		SecondaryVFXColor = Color3.fromRGB(185, 60, 255),
+		AttackStyle = "EnmaSlash",
+	},
+	{
+		Id = "Sanji",
+		DisplayName = "VINSMOKE SANJI",
+		Title = "IFRIT JAMBE [BLUE FLAME]",
+		Position = Vector3.new(-10, 3, 8),
+		TorsoColor = Color3.fromRGB(25, 25, 35),
+		LegsColor = Color3.fromRGB(20, 20, 30),
+		HairColor = Color3.fromRGB(255, 215, 55),
+		PrimaryVFXColor = Color3.fromRGB(0, 195, 255),
+		SecondaryVFXColor = Color3.fromRGB(200, 245, 255),
+		AttackStyle = "IfritKick",
+	},
+	{
+		Id = "Ace",
+		DisplayName = "PORTGAS D. ACE",
+		Title = "FLAME EMPEROR [MERA MERA]",
+		Position = Vector3.new(10, 3, 8),
+		TorsoColor = Color3.fromRGB(235, 185, 145),
+		LegsColor = Color3.fromRGB(30, 30, 35),
+		HairColor = Color3.fromRGB(25, 25, 30),
+		PrimaryVFXColor = Color3.fromRGB(255, 110, 20),
+		SecondaryVFXColor = Color3.fromRGB(255, 220, 60),
+		AttackStyle = "EnteiSun",
+	},
+	{
+		Id = "Law",
+		DisplayName = "TRAFALGAR LAW",
+		Title = "SURGEON OF DEATH [K-ROOM]",
+		Position = Vector3.new(32, 3, -5),
+		TorsoColor = Color3.fromRGB(240, 190, 40),
+		LegsColor = Color3.fromRGB(35, 45, 75),
+		HairColor = Color3.fromRGB(245, 245, 250),
+		PrimaryVFXColor = Color3.fromRGB(65, 225, 255),
+		SecondaryVFXColor = Color3.fromRGB(180, 100, 255),
+		AttackStyle = "RoomShock",
+	},
+	{
+		Id = "Shanks",
+		DisplayName = "RED-HAIRED SHANKS",
+		Title = "CONQUEROR HAKI [KAMUSARI]",
+		Position = Vector3.new(44, 3, -18),
+		TorsoColor = Color3.fromRGB(235, 235, 240),
+		LegsColor = Color3.fromRGB(115, 45, 45),
+		HairColor = Color3.fromRGB(200, 30, 40),
+		PrimaryVFXColor = Color3.fromRGB(255, 15, 45),
+		SecondaryVFXColor = Color3.fromRGB(25, 10, 20),
+		AttackStyle = "KamusariHaki",
+	},
 }
 
--- 1. กำหนดระดับร่างวิวัฒนาการอนิเมะตามค่า DamageStat ไร้ขีดจำกัด
-local function getEvolutionTier(damage: number): EvolutionTier
-	if damage >= 1500 then
-		return {
-			Name = "GOD OF DESTRUCTION",
-			Color = Color3.fromRGB(255, 35, 65),
-			SecondaryColor = Color3.fromRGB(255, 200, 50),
-			SplashRadius = 16,
-			BeamWidth = 2.8,
-		}
-	elseif damage >= 400 then
-		return {
-			Name = "SUPER GOLDEN FORM",
-			Color = Color3.fromRGB(255, 210, 40),
-			SecondaryColor = Color3.fromRGB(255, 255, 180),
-			SplashRadius = 10,
-			BeamWidth = 2.0,
-		}
-	elseif damage >= 100 then
-		return {
-			Name = "AWAKENED SORCERER",
-			Color = Color3.fromRGB(185, 60, 255),
-			SecondaryColor = Color3.fromRGB(230, 150, 255),
-			SplashRadius = 5,
-			BeamWidth = 1.4,
-		}
-	else
-		return {
-			Name = "SPIRIT NOVICE",
-			Color = Color3.fromRGB(0, 215, 255),
-			SecondaryColor = Color3.fromRGB(160, 245, 255),
-			SplashRadius = 0,
-			BeamWidth = 1.0,
-		}
-	end
-end
-
--- 2. ดึงสเตตัสปัจจุบันจากผู้เล่นในเซิร์ฟเวอร์ (รองรับทั้งเล่นคนเดียวและหลายคน)
-local function getCurrentCombatStats(): (number, number, number)
+-- 2. ดึงค่าสเตตัสรวมที่ผู้เล่นอัปเกรดจากการ์ดทุกเวฟ
+local function getCurrentCombatStats(): (number, number, number, number, number)
 	local maxDamage = GameConfig.INITIAL_PLAYER_STATS.DAMAGE_STAT
 	local maxRange = GameConfig.INITIAL_PLAYER_STATS.RANGE_STAT
 	local minCooldown = GameConfig.INITIAL_PLAYER_STATS.COOLDOWN_STAT
+	local maxSplash = (GameConfig.INITIAL_PLAYER_STATS and GameConfig.INITIAL_PLAYER_STATS.SPLASH_STAT) or 6
+	local maxCrit = (GameConfig.INITIAL_PLAYER_STATS and GameConfig.INITIAL_PLAYER_STATS.CRIT_CHANCE) or 15
+
+	local splashAttrKey = (GameConfig.PLAYER_ATTRS and GameConfig.PLAYER_ATTRS.SPLASH_STAT) or "SplashStat"
+	local critAttrKey = (GameConfig.PLAYER_ATTRS and GameConfig.PLAYER_ATTRS.CRIT_CHANCE) or "CritChance"
 
 	for _, plr in ipairs(Players:GetPlayers()) do
 		local d = plr:GetAttribute(GameConfig.PLAYER_ATTRS.DAMAGE_STAT)
 		local r = plr:GetAttribute(GameConfig.PLAYER_ATTRS.RANGE_STAT)
 		local c = plr:GetAttribute(GameConfig.PLAYER_ATTRS.COOLDOWN_STAT)
-		if typeof(d) == "number" and d > maxDamage then
-			maxDamage = d
-		end
-		if typeof(r) == "number" and r > maxRange then
-			maxRange = r
-		end
-		if typeof(c) == "number" and c < minCooldown then
-			minCooldown = c
-		end
+		local s = plr:GetAttribute(splashAttrKey)
+		local cr = plr:GetAttribute(critAttrKey)
+		if typeof(d) == "number" and d > maxDamage then maxDamage = d end
+		if typeof(r) == "number" and r > maxRange then maxRange = r end
+		if typeof(c) == "number" and c < minCooldown then minCooldown = c end
+		if typeof(s) == "number" and s > maxSplash then maxSplash = s end
+		if typeof(cr) == "number" and cr > maxCrit then maxCrit = cr end
 	end
 
-	return maxDamage, maxRange, math.max(GameConfig.INITIAL_PLAYER_STATS.MIN_COOLDOWN, minCooldown)
+	return maxDamage, maxRange, math.max(GameConfig.INITIAL_PLAYER_STATS.MIN_COOLDOWN, minCooldown), maxSplash, maxCrit
 end
 
--- 3. สร้างเอฟเฟกต์ปล่อยคลื่นพลังอนิเมะ (Procedural Anime VFX)
-local function playAnimeBlastVFX(originPos: Vector3, targetPos: Vector3, tierInfo: EvolutionTier)
+-- 3. ฟังก์ชันสร้างสายฟ้าฮาคิราชันย์ซิกแซก (Conqueror's Haki Lightning)
+local function spawnHakiLightning(startPos: Vector3, endPos: Vector3, color: Color3)
+	local segments = 4
+	local prev = startPos
+	for i = 1, segments do
+		local alpha = i / segments
+		local jitter = (i < segments)
+				and Vector3.new(math.random(-25, 25) / 10, math.random(-15, 25) / 10, math.random(-25, 25) / 10)
+			or Vector3.zero
+		local nextPos = startPos:Lerp(endPos, alpha) + jitter
+		local dist = (nextPos - prev).Magnitude
+		if dist >= 0.05 then
+			local bolt = Instance.new("Part")
+			bolt.Name = "HakiLightningBolt"
+			bolt.Anchored = true
+			bolt.CanCollide = false
+			bolt.Material = Enum.Material.Neon
+			bolt.Color = color
+			bolt.Size = Vector3.new(0.45, 0.45, dist)
+			bolt.CFrame = CFrame.lookAt((prev + nextPos) / 2, nextPos)
+			bolt.Parent = Workspace
+
+			TweenService:Create(bolt, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = Vector3.new(0.05, 0.05, dist),
+				Transparency = 1,
+			}):Play()
+			task.delay(0.28, function()
+				if bolt then bolt:Destroy() end
+			end)
+		end
+		prev = nextPos
+	end
+end
+
+-- 4. ระบบปล่อยท่าไม้ตาย One Piece สุดอลังการแยกตามตัวละคร!
+local function playOnePieceUltimateVFX(heroConfig: any, originPos: Vector3, targetPos: Vector3, splashRadius: number, isCrit: boolean)
+	local style = heroConfig.AttackStyle
+	local pColor = heroConfig.PrimaryVFXColor
+	local sColor = heroConfig.SecondaryVFXColor
+	local effectScale = isCrit and 1.45 or 1.0
+
+	-- ปล่อยสายฟ้าฮาคิราชันย์ทุกครั้งที่โจมตีติดคริติคอล หรือเป็นท่าของลูฟี่/แชงคูส
+	if isCrit or style == "KamusariHaki" or style == "BajrangFist" then
+		spawnHakiLightning(originPos, targetPos, Color3.fromRGB(255, 20, 55))
+		spawnHakiLightning(targetPos, targetPos + Vector3.new(0, 12 * effectScale, 0), Color3.fromRGB(25, 10, 20))
+	end
+
+	if style == "RoomShock" then
+		-- ท่าของ Trafalgar Law: กางโดมทรงกลมสีฟ้า ROOM แล้วผ่าด้วยเสาสายฟ้าศัลยกรรม
+		local roomDome = Instance.new("Part")
+		roomDome.Name = "OpeOpeRoomDome"
+		roomDome.Shape = Enum.PartType.Ball
+		roomDome.Anchored = true
+		roomDome.CanCollide = false
+		roomDome.Material = Enum.Material.ForceField
+		roomDome.Color = pColor
+		roomDome.Size = Vector3.new(2, 2, 2)
+		roomDome.Position = targetPos
+		roomDome.Transparency = 0.25
+		roomDome.Parent = Workspace
+
+		local domeSize = math.max(14, splashRadius * 2.2) * effectScale
+		TweenService:Create(roomDome, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Size = Vector3.new(domeSize, domeSize, domeSize),
+			Transparency = 0.95,
+		}):Play()
+		task.delay(0.35, function()
+			if roomDome then roomDome:Destroy() end
+		end)
+	elseif style == "EnteiSun" then
+		-- ท่าของ Portgas D. Ace: ลูกบอลพระอาทิตย์เพลิงยักษ์ Dai Enkai: Entei พุ่งตกใส่เป้าหมาย
+		local sunBall = Instance.new("Part")
+		sunBall.Name = "AceEnteiSun"
+		sunBall.Shape = Enum.PartType.Ball
+		sunBall.Anchored = true
+		sunBall.CanCollide = false
+		sunBall.Material = Enum.Material.Neon
+		sunBall.Color = pColor
+		sunBall.Size = Vector3.new(7, 7, 7) * effectScale
+		sunBall.Position = originPos + Vector3.new(0, 8, 0)
+		sunBall.Parent = Workspace
+
+		TweenService:Create(sunBall, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			Position = targetPos,
+			Size = Vector3.new(splashRadius * 2.1, splashRadius * 2.1, splashRadius * 2.1) * effectScale,
+			Transparency = 0.85,
+		}):Play()
+		task.delay(0.22, function()
+			if sunBall then sunBall:Destroy() end
+		end)
+	elseif style == "EnmaSlash" or style == "KamusariHaki" then
+		-- ท่าคลื่นดาบยักษ์ของ Zoro และ Shanks: จันทร์เสี้ยวคลื่นดาบ + เสาพายุหมุน
+		local crescent = Instance.new("Part")
+		crescent.Name = "HakiSwordSlashWave"
+		crescent.Anchored = true
+		crescent.CanCollide = false
+		crescent.Material = Enum.Material.Neon
+		crescent.Color = pColor
+		crescent.Size = Vector3.new(0.6, 8 * effectScale, 10 * effectScale)
+		if (targetPos - originPos).Magnitude >= 0.05 then
+			crescent.CFrame = CFrame.lookAt(originPos, targetPos)
+		else
+			crescent.CFrame = CFrame.new(originPos)
+		end
+		crescent.Parent = Workspace
+
+		local forwardPos = targetPos + (targetPos - originPos).Unit * 2
+		TweenService:Create(crescent, TweenInfo.new(0.22, Enum.EasingStyle.Linear), {
+			CFrame = CFrame.lookAt(targetPos, forwardPos) * CFrame.Angles(0, 0, math.rad(45)),
+			Size = Vector3.new(0.2, 12 * effectScale, 16 * effectScale),
+			Transparency = 1,
+		}):Play()
+		task.delay(0.25, function()
+			if crescent then crescent:Destroy() end
+		end)
+	end
+
+	-- ลำแสงหลักและวงแหวนคลื่นกระแทก (Shockwave Ring) ที่จุดปะทะสำหรับทุกตัวละคร
 	local dist = (targetPos - originPos).Magnitude
-	if dist < 0.05 then
-		return
+	if dist >= 0.05 then
+		local beam = Instance.new("Part")
+		beam.Name = "OnePieceSignatureBeam"
+		beam.Anchored = true
+		beam.CanCollide = false
+		beam.Material = Enum.Material.Neon
+		beam.Color = pColor
+		beam.Size = Vector3.new(1.6 * effectScale, 1.6 * effectScale, dist)
+		beam.CFrame = CFrame.lookAt((originPos + targetPos) / 2, targetPos)
+		beam.Parent = Workspace
+
+		local shockRing = Instance.new("Part")
+		shockRing.Name = "HakiShockwave"
+		shockRing.Shape = Enum.PartType.Cylinder
+		shockRing.Anchored = true
+		shockRing.CanCollide = false
+		shockRing.Material = Enum.Material.Neon
+		shockRing.Color = sColor
+		shockRing.Size = Vector3.new(0.4, 3, 3)
+		shockRing.CFrame = CFrame.new(targetPos) * CFrame.Angles(0, 0, math.rad(90))
+		shockRing.Parent = Workspace
+
+		local endDiameter = math.max(10, splashRadius * 2.2) * effectScale
+		TweenService:Create(beam, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = Vector3.new(0.1, 0.1, dist),
+			Transparency = 1,
+		}):Play()
+
+		TweenService:Create(shockRing, TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Size = Vector3.new(0.1, endDiameter, endDiameter),
+			Transparency = 1,
+		}):Play()
+
+		task.delay(0.3, function()
+			if beam then beam:Destroy() end
+			if shockRing then shockRing:Destroy() end
+		end)
 	end
-
-	local midPoint = (originPos + targetPos) / 2
-
-	-- ลำแสงคลื่นพลังหลัก
-	local beamPart = Instance.new("Part")
-	beamPart.Name = "AnimeEnergyBeam"
-	beamPart.Anchored = true
-	beamPart.CanCollide = false
-	beamPart.Material = Enum.Material.Neon
-	beamPart.Color = tierInfo.Color
-	local width = tierInfo.BeamWidth or 1.0
-	beamPart.Size = Vector3.new(width, width, dist)
-	beamPart.CFrame = CFrame.lookAt(midPoint, targetPos)
-	beamPart.Parent = Workspace
-
-	-- ลูกแก้วระเบิดที่จุดปะทะ
-	local impactSphere = Instance.new("Part")
-	impactSphere.Name = "AnimeImpactOrb"
-	impactSphere.Shape = Enum.PartType.Ball
-	impactSphere.Anchored = true
-	impactSphere.CanCollide = false
-	impactSphere.Material = Enum.Material.Neon
-	impactSphere.Color = tierInfo.SecondaryColor
-	impactSphere.Size = Vector3.new(2, 2, 2)
-	impactSphere.Position = targetPos
-	impactSphere.Parent = Workspace
-
-	local endSize = math.max(6, (tierInfo.SplashRadius or 3) * 1.5)
-	TweenService:Create(beamPart, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Size = Vector3.new(0.1, 0.1, dist),
-		Transparency = 1,
-	}):Play()
-
-	TweenService:Create(impactSphere, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Size = Vector3.new(endSize, endSize, endSize),
-		Transparency = 1,
-	}):Play()
-
-	task.delay(0.3, function()
-		if beamPart then
-			beamPart:Destroy()
-		end
-		if impactSphere then
-			impactSphere:Destroy()
-		end
-	end)
 end
 
--- 4. สร้างโมเดลแท่นยูนิตอนิเมะ 6 จุดข้างทางเดินอัตโนมัติ
-local function ensureAnimeTowers(): Folder
-	local towersFolder = Workspace:FindFirstChild(GameConfig.FOLDERS.TOWERS)
-	if towersFolder and towersFolder:IsA("Folder") then
-		return towersFolder
+-- 5. ฟังก์ชันปั้นหุ่น R6 ตัวละคร One Piece ทั้ง 6 ตัวพร้อมหมวกฟาง ดาบ 3 เล่ม และผ้าคลุม!
+local function buildOnePieceHeroR6(heroConfig: any, index: number, parentFolder: Folder)
+	local pos = heroConfig.Position
+	local towerModel = Instance.new("Model")
+	towerModel.Name = "OnePieceUnit_" .. index .. "_" .. heroConfig.Id
+
+	local function createPart(name: string, size: Vector3, color: Color3, mat: Enum.Material?): Part
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Size = size
+		p.Color = color
+		p.Material = mat or Enum.Material.SmoothPlastic
+		p.Anchored = true
+		p.CanCollide = false
+		p.Parent = towerModel
+		return p
 	end
 
-	towersFolder = Instance.new("Folder")
-	towersFolder.Name = GameConfig.FOLDERS.TOWERS
-	towersFolder.Parent = Workspace
+	-- แท่นยืนหินอ่อนสลักทอง
+	local pedestal = createPart("Pedestal", Vector3.new(1.6, 6.5, 6.5), Color3.fromRGB(30, 32, 48), Enum.Material.Marble)
+	pedestal.Shape = Enum.PartType.Cylinder
+	pedestal.CFrame = CFrame.new(pos - Vector3.new(0, 2.2, 0)) * CFrame.Angles(0, 0, math.rad(90))
 
-	local towerPositions = {
-		Vector3.new(-40, 3, -28),
-		Vector3.new(-32, 3, -10),
-		Vector3.new(-8, 3, 8),
-		Vector3.new(8, 3, 8),
-		Vector3.new(32, 3, -5),
-		Vector3.new(42, 3, -18),
-	}
+	local skinColor = Color3.fromRGB(255, 220, 185)
+	local torso = createPart("Torso", Vector3.new(2, 2, 1), heroConfig.TorsoColor)
+	local head = createPart("Head", Vector3.new(1.25, 1.25, 1.25), skinColor)
+	local leftArm = createPart("LeftArm", Vector3.new(1, 2, 1), skinColor)
+	local rightArm = createPart("RightArm", Vector3.new(1, 2, 1), skinColor)
+	local leftLeg = createPart("LeftLeg", Vector3.new(1, 2, 1), heroConfig.LegsColor)
+	local rightLeg = createPart("RightLeg", Vector3.new(1, 2, 1), heroConfig.LegsColor)
+	local hair = createPart("Hair", Vector3.new(1.38, 0.65, 1.38), heroConfig.HairColor)
 
-	for idx, pos in ipairs(towerPositions) do
-		local towerModel = Instance.new("Model")
-		towerModel.Name = "AnimeUnit_" .. idx
+	-- ลูกแก้ว/จุดปล่อยพลังประจำตัว
+	local orb = createPart("SpiritOrb", Vector3.new(1.4, 1.4, 1.4), heroConfig.PrimaryVFXColor, Enum.Material.Neon)
+	orb.Shape = Enum.PartType.Ball
 
-		-- แท่นยืนอัญเชิญ
-		local pedestal = Instance.new("Part")
-		pedestal.Name = "Pedestal"
-		pedestal.Shape = Enum.PartType.Cylinder
-		pedestal.Size = Vector3.new(1.5, 6, 6)
-		pedestal.CFrame = CFrame.new(pos - Vector3.new(0, 2.2, 0)) * CFrame.Angles(0, 0, math.rad(90))
-		pedestal.Anchored = true
-		pedestal.Material = Enum.Material.Marble
-		pedestal.Color = Color3.fromRGB(35, 35, 50)
-		pedestal.Parent = towerModel
-
-		-- ลำตัวยูนิตอนิเมะ
-		local torso = Instance.new("Part")
-		torso.Name = "Torso"
-		torso.Size = Vector3.new(2.2, 4.5, 1.4)
-		torso.Position = pos + Vector3.new(0, 0.8, 0)
-		torso.Anchored = true
-		torso.CanCollide = false
-		torso.Material = Enum.Material.SmoothPlastic
-		torso.Color = Color3.fromRGB(25, 30, 45)
-		torso.Parent = towerModel
-
-		-- ศีรษะยูนิตอนิเมะ
-		local head = Instance.new("Part")
-		head.Name = "Head"
-		head.Size = Vector3.new(1.8, 1.8, 1.8)
-		head.Position = pos + Vector3.new(0, 4.0, 0)
-		head.Anchored = true
-		head.CanCollide = false
-		head.Color = Color3.fromRGB(255, 225, 195)
-		head.Parent = towerModel
-
-		-- ลูกแก้วปล่อยพลังด้านหน้าตัวละคร
-		local orb = Instance.new("Part")
-		orb.Name = "SpiritOrb"
-		orb.Shape = Enum.PartType.Ball
-		orb.Size = Vector3.new(1.5, 1.5, 1.5)
-		orb.Position = pos + Vector3.new(0, 2.0, -2.0)
-		orb.Anchored = true
-		orb.CanCollide = false
-		orb.Material = Enum.Material.Neon
-		orb.Color = Color3.fromRGB(0, 215, 255)
-		orb.Parent = towerModel
-
-		-- วงแหวนแสดงระยะโจมตีบนพื้น
-		local rangeRing = Instance.new("Part")
-		rangeRing.Name = "RangeIndicator"
-		rangeRing.Shape = Enum.PartType.Cylinder
-		local initRange = GameConfig.INITIAL_PLAYER_STATS.RANGE_STAT
-		rangeRing.Size = Vector3.new(0.15, initRange * 2, initRange * 2)
-		rangeRing.CFrame = CFrame.new(pos - Vector3.new(0, 2.8, 0)) * CFrame.Angles(0, 0, math.rad(90))
-		rangeRing.Anchored = true
-		rangeRing.CanCollide = false
-		rangeRing.Material = Enum.Material.ForceField
-		rangeRing.Color = Color3.fromRGB(0, 215, 255)
-		rangeRing.Transparency = 0.65
-		rangeRing.Parent = towerModel
-
-		-- ออร่ารอบตัวยูนิต
-		local aura = Instance.new("Highlight")
-		aura.Name = "AnimeAura"
-		aura.FillColor = Color3.fromRGB(0, 215, 255)
-		aura.OutlineColor = Color3.fromRGB(255, 255, 255)
-		aura.FillTransparency = 0.45
-		aura.Parent = towerModel
-
-		-- ป้ายแสดงชื่อร่างและค่าพลังบนหัวยูนิต
-		local bb = Instance.new("BillboardGui")
-		bb.Name = "TowerStatGui"
-		bb.Size = UDim2.new(0, 150, 0, 42)
-		bb.StudsOffset = Vector3.new(0, 3.5, 0)
-		bb.AlwaysOnTop = true
-		bb.Adornee = head
-		bb.Parent = towerModel
-
-		local titleLabel = Instance.new("TextLabel")
-		titleLabel.Name = "InfoText"
-		titleLabel.Size = UDim2.new(1, 0, 1, 0)
-		titleLabel.BackgroundTransparency = 1
-		titleLabel.Font = Enum.Font.GothamBlack
-		titleLabel.TextColor3 = Color3.fromRGB(0, 230, 255)
-		titleLabel.TextStrokeTransparency = 0.1
-		titleLabel.TextScaled = true
-		titleLabel.Text = "SPIRIT NOVICE\nDMG: 35 | RNG: 32"
-		titleLabel.Parent = bb
-
-		towerModel.PrimaryPart = torso
-		towerModel.Parent = towersFolder
+	-- สร้างเครื่องประดับและอาวุธเอกลักษณ์เฉพาะตัวละคร One Piece (เก็บ Offset สัมพัทธ์กับ Torso)
+	local accessories: { { Part: Part, Offset: CFrame } } = {}
+	local function addAccessory(name: string, size: Vector3, color: Color3, mat: Enum.Material, offsetCF: CFrame, shape: Enum.PartType?): Part
+		local acc = createPart(name, size, color, mat)
+		if shape then
+			acc.Shape = shape
+		end
+		table.insert(accessories, { Part = acc, Offset = offsetCF })
+		return acc
 	end
 
-	return towersFolder
+	if heroConfig.Id == "Luffy" then
+		-- หมวกฟางลูฟี่ (ปีกหมวก + ตัวหมวก + แถบผ้าสีแดง + วงแหวนเมฆขาว Gear 5)
+		addAccessory("StrawHatBrim", Vector3.new(0.2, 2.8, 2.8), Color3.fromRGB(245, 205, 70), Enum.Material.Fabric, CFrame.new(0, 2.2, 0) * CFrame.Angles(0, 0, math.rad(90)), Enum.PartType.Cylinder)
+		addAccessory("StrawHatDome", Vector3.new(1.5, 1.5, 1.5), Color3.fromRGB(245, 205, 70), Enum.Material.Fabric, CFrame.new(0, 2.45, 0), Enum.PartType.Ball)
+		addAccessory("StrawHatRedRibbon", Vector3.new(0.25, 1.6, 1.6), Color3.fromRGB(220, 30, 40), Enum.Material.SmoothPlastic, CFrame.new(0, 2.3, 0) * CFrame.Angles(0, 0, math.rad(90)), Enum.PartType.Cylinder)
+		addAccessory("Gear5CloudScarf", Vector3.new(3.2, 3.2, 0.5), Color3.fromRGB(255, 255, 255), Enum.Material.Neon, CFrame.new(0, 1.2, 0.5))
+	elseif heroConfig.Id == "Zoro" then
+		-- ดาบ 3 เล่มของโซโล (คาบที่ปาก 1 เล่ม + ถือในมือซ้าย-ขวาอาบฮาคิสีม่วง-เขียว)
+		addAccessory("MouthKatanaWado", Vector3.new(3.8, 0.18, 0.25), Color3.fromRGB(255, 255, 255), Enum.Material.Neon, CFrame.new(0.6, 1.35, -0.75))
+		addAccessory("RightKatanaEnma", Vector3.new(0.2, 0.25, 4.2), Color3.fromRGB(185, 50, 255), Enum.Material.Neon, CFrame.new(1.6, 0.2, -1.8))
+		addAccessory("LeftKatanaSandai", Vector3.new(0.2, 0.25, 4.2), Color3.fromRGB(50, 255, 130), Enum.Material.Neon, CFrame.new(-1.6, 0.2, -1.8))
+	elseif heroConfig.Id == "Sanji" then
+		-- ขาขวาติดไฟสีฟ้า Ifrit Jambe + เนคไทสีทอง
+		addAccessory("GoldenTie", Vector3.new(0.35, 1.3, 0.15), Color3.fromRGB(255, 210, 50), Enum.Material.SmoothPlastic, CFrame.new(0, 0.2, -0.55))
+		addAccessory("IfritBlueFlameLeg", Vector3.new(1.35, 2.2, 1.35), Color3.fromRGB(0, 200, 255), Enum.Material.Neon, CFrame.new(0.55, -1.8, -0.2))
+	elseif heroConfig.Id == "Ace" then
+		-- หมวกคาวบอยสีส้มของเอส + สร้อยลูกปัดแดง + ลูกไฟบนมือ
+		addAccessory("AceOrangeHat", Vector3.new(0.25, 2.7, 2.7), Color3.fromRGB(240, 115, 30), Enum.Material.SmoothPlastic, CFrame.new(0, 2.2, 0) * CFrame.Angles(0, 0, math.rad(90)), Enum.PartType.Cylinder)
+		addAccessory("RedBeadNecklace", Vector3.new(1.5, 0.3, 1.3), Color3.fromRGB(220, 25, 35), Enum.Material.Neon, CFrame.new(0, 0.95, 0))
+	elseif heroConfig.Id == "Law" then
+		-- หมวกขนสัตว์สีขาวของลอว์ + ดาบยาว Kikoku
+		addAccessory("LawFurHat", Vector3.new(1.55, 1.1, 1.55), Color3.fromRGB(245, 245, 250), Enum.Material.SmoothPlastic, CFrame.new(0, 2.2, 0))
+		addAccessory("KikokuNodachi", Vector3.new(0.22, 5.2, 0.35), Color3.fromRGB(65, 225, 255), Enum.Material.Neon, CFrame.new(1.6, 0.8, -0.8) * CFrame.Angles(math.rad(35), 0, 0))
+	elseif heroConfig.Id == "Shanks" then
+		-- ผ้าคลุมไหล่จักรพรรดิสีดำ + ดาบ Gryphon อาบฮาคิราชันย์สีแดงทมิฬ
+		addAccessory("YonkoBlackCape", Vector3.new(2.8, 3.8, 0.35), Color3.fromRGB(20, 20, 28), Enum.Material.SmoothPlastic, CFrame.new(0, -0.4, 0.7) * CFrame.Angles(math.rad(12), 0, 0))
+		addAccessory("GryphonHakiSaber", Vector3.new(0.25, 0.35, 4.6), Color3.fromRGB(255, 20, 50), Enum.Material.Neon, CFrame.new(1.6, 0.3, -2.0))
+	end
+
+	-- วงแหวนแสดงระยะยิงบนพื้น
+	local initRange = GameConfig.INITIAL_PLAYER_STATS.RANGE_STAT
+	local rangeRing = createPart("RangeIndicator", Vector3.new(0.15, initRange * 2, initRange * 2), heroConfig.PrimaryVFXColor, Enum.Material.ForceField)
+	rangeRing.Shape = Enum.PartType.Cylinder
+	rangeRing.CFrame = CFrame.new(pos - Vector3.new(0, 2.8, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	rangeRing.Transparency = 0.68
+
+	-- ออร่าตัวละคร
+	local aura = Instance.new("Highlight")
+	aura.Name = "AnimeAura"
+	aura.FillColor = heroConfig.PrimaryVFXColor
+	aura.OutlineColor = heroConfig.SecondaryVFXColor
+	aura.FillTransparency = 0.55
+	aura.Parent = towerModel
+
+	-- ป้ายชื่อตัวละคร One Piece และค่าพลัง
+	local bb = Instance.new("BillboardGui")
+	bb.Name = "TowerStatGui"
+	bb.Size = UDim2.new(0, 175, 0, 48)
+	bb.StudsOffset = Vector3.new(0, 3.8, 0)
+	bb.AlwaysOnTop = true
+	bb.Adornee = head
+	bb.Parent = towerModel
+
+	local titleLabel = Instance.new("TextLabel")
+	titleLabel.Name = "InfoText"
+	titleLabel.Size = UDim2.new(1, 0, 1, 0)
+	titleLabel.BackgroundTransparency = 1
+	titleLabel.Font = Enum.Font.GothamBlack
+	titleLabel.TextColor3 = heroConfig.PrimaryVFXColor
+	titleLabel.TextStrokeTransparency = 0.05
+	titleLabel.TextScaled = true
+	titleLabel.Text = string.format("%s\n%s", heroConfig.DisplayName, heroConfig.Title)
+	titleLabel.Parent = bb
+
+	local function orientR6Hero(lookTarget: Vector3)
+		local centerPos = pos + Vector3.new(0, 1.2, 0)
+		local flatTarget = Vector3.new(lookTarget.X, centerPos.Y, lookTarget.Z)
+		if (flatTarget - centerPos).Magnitude < 0.05 then
+			flatTarget = centerPos + Vector3.new(0, 0, -1)
+		end
+		local baseCF = CFrame.lookAt(centerPos, flatTarget)
+		torso.CFrame = baseCF
+		head.CFrame = baseCF * CFrame.new(0, 1.6, 0)
+		hair.CFrame = baseCF * CFrame.new(0, 2.05, 0)
+		leftArm.CFrame = baseCF * CFrame.new(-1.5, 0, -0.2) * CFrame.Angles(math.rad(25), 0, 0)
+		rightArm.CFrame = baseCF * CFrame.new(1.5, 0.2, -0.5) * CFrame.Angles(math.rad(75), 0, 0)
+		leftLeg.CFrame = baseCF * CFrame.new(-0.5, -2.0, 0)
+		rightLeg.CFrame = baseCF * CFrame.new(0.5, -2.0, 0)
+		orb.CFrame = baseCF * CFrame.new(0, 0.6, -2.4)
+
+		for _, item in ipairs(accessories) do
+			item.Part.CFrame = baseCF * item.Offset
+		end
+	end
+
+	orientR6Hero(pos + Vector3.new(0, 0, -10))
+	towerModel.PrimaryPart = torso
+	towerModel.Parent = parentFolder
+
+	return towerModel, orientR6Hero
 end
 
--- 5. โหมดสร้างหุ่นซ้อมอัตโนมัติ (ทำงานเฉพาะตอนรันเทส Worktree ที่ 2 แยกเดี่ยวๆ)
+-- 6. โหมดสร้างหุ่นซ้อมอัตโนมัติ (เมื่อรันเทส Worktree ที่ 2 แยกเดี่ยวๆ)
 local function ensureTestDummyIfStandalone()
 	task.delay(3, function()
 		local enemiesFolder = Workspace:FindFirstChild(GameConfig.FOLDERS.ENEMIES)
@@ -261,15 +422,14 @@ local function ensureTestDummyIfStandalone()
 				enemiesFolder.Parent = Workspace
 			end
 
-			-- ตรวจสอบซ้ำอีกครั้งว่ามีหุ่นซ้อมอยู่แล้วหรือไม่
-			if not enemiesFolder:FindFirstChild("StandaloneTrainingDummy") then
+			if not enemiesFolder:FindFirstChild("PacifistaTrainingDummy") then
 				local dummy = Instance.new("Model")
-				dummy.Name = "StandaloneTrainingDummy"
+				dummy.Name = "PacifistaTrainingDummy"
 
 				local root = Instance.new("Part")
 				root.Name = "HumanoidRootPart"
 				root.Size = Vector3.new(3, 5, 2)
-				root.Position = Vector3.new(-30, 3, -20)
+				root.Position = Vector3.new(-28, 3, -18)
 				root.Anchored = true
 				root.Color = Color3.fromRGB(200, 60, 60)
 				root.Parent = dummy
@@ -292,38 +452,39 @@ local function ensureTestDummyIfStandalone()
 	end)
 end
 
--- 6. เริ่มต้นสร้างหอคอยและลูปควบคุมการยิงและการวิวัฒนาการ
-local towersFolder = ensureAnimeTowers()
+-- 7. เริ่มสร้างทั้ง 6 ตัวละคร One Piece และรันลูปปล่อยพลัง
+local towersFolder = Workspace:FindFirstChild(GameConfig.FOLDERS.TOWERS)
+if not towersFolder then
+	towersFolder = Instance.new("Folder")
+	towersFolder.Name = GameConfig.FOLDERS.TOWERS
+	towersFolder.Parent = Workspace
+else
+	towersFolder:ClearAllChildren()
+end
+
 ensureTestDummyIfStandalone()
 
-for _, towerChild in ipairs(towersFolder:GetChildren()) do
-	if not towerChild:IsA("Model") then
-		continue
-	end
-	local towerModel = towerChild
+for idx, heroConfig in ipairs(ONE_PIECE_HEROES) do
+	local towerModel, orientR6Hero = buildOnePieceHeroR6(heroConfig, idx, towersFolder)
 
 	task.spawn(function()
 		local torso = towerModel:WaitForChild("Torso") :: BasePart
-		local head = towerModel:WaitForChild("Head") :: BasePart
 		local orb = towerModel:WaitForChild("SpiritOrb") :: BasePart
 		local rangeRing = towerModel:WaitForChild("RangeIndicator") :: BasePart
-		local aura = towerModel:WaitForChild("AnimeAura") :: Highlight
-		local statGui = towerModel:WaitForChild("TowerStatGui")
-		local infoText = statGui:WaitForChild("InfoText") :: TextLabel
+		local infoText = towerModel:WaitForChild("TowerStatGui"):WaitForChild("InfoText") :: TextLabel
 
 		while towerModel.Parent do
-			local dmg, range, cooldown = getCurrentCombatStats()
-			local tier = getEvolutionTier(dmg)
-
-			-- อัปเดตสีออร่า ป้ายสเตตัส และขนาดวงแหวนระยะยิงแบบสดๆ
-			aura.FillColor = tier.Color
-			orb.Color = tier.Color
-			rangeRing.Color = tier.Color
+			local dmg, range, cooldown, splashRadius, critChance = getCurrentCombatStats()
 			rangeRing.Size = Vector3.new(0.15, range * 2, range * 2)
-			infoText.TextColor3 = tier.Color
-			infoText.Text = string.format("%s\nDMG: %d | SPD: %.2fs", tier.Name, math.floor(dmg), cooldown)
+			infoText.Text = string.format(
+				"%s [%s]\nDMG: %d | AoE: %d | SPD: %.2fs",
+				heroConfig.DisplayName,
+				heroConfig.Id:upper(),
+				math.floor(dmg),
+				math.floor(splashRadius),
+				cooldown
+			)
 
-			-- ค้นหาซอมบี้ที่ใกล้ที่สุดในระยะยิง
 			local enemiesFolder = Workspace:FindFirstChild(GameConfig.FOLDERS.ENEMIES)
 			local nearestEnemy: Model? = nil
 			local shortestDist = range
@@ -349,19 +510,14 @@ for _, towerChild in ipairs(towersFolder:GetChildren()) do
 				local targetRoot = nearestEnemy:FindFirstChild("HumanoidRootPart") :: BasePart?
 				local targetHum = nearestEnemy:FindFirstChildOfClass("Humanoid")
 				if targetRoot and targetHum and targetHum.Health > 0 then
-					-- หันหน้ายูนิตอนิเมะไปทางเป้าหมาย
-					local lookPos = Vector3.new(targetRoot.Position.X, torso.Position.Y, targetRoot.Position.Z)
-					if (lookPos - torso.Position).Magnitude > 0.05 then
-						torso.CFrame = CFrame.lookAt(torso.Position, lookPos)
-					end
-					head.Position = torso.Position + Vector3.new(0, 3.2, 0)
-					orb.Position = torso.Position + (torso.CFrame.LookVector * 2.2) + Vector3.new(0, 1.0, 0)
+					orientR6Hero(targetRoot.Position)
 
-					-- ปล่อยเอฟเฟกต์ลำแสงอนิเมะ
-					playAnimeBlastVFX(orb.Position, targetRoot.Position, tier)
+					local isCrit = (math.random(1, 100) <= critChance)
+					local finalDamage = isCrit and math.floor(dmg * 2.0) or dmg
 
-					-- ทำดาเมจเดี่ยวหรือดาเมจระเบิดวงกว้าง (AoE Splash)
-					if tier.SplashRadius and tier.SplashRadius > 0 and enemiesFolder then
+					playOnePieceUltimateVFX(heroConfig, orb.Position, targetRoot.Position, splashRadius, isCrit)
+
+					if splashRadius > 0 and enemiesFolder then
 						for _, otherEnemy in ipairs(enemiesFolder:GetChildren()) do
 							if not otherEnemy:IsA("Model") then
 								continue
@@ -369,13 +525,13 @@ for _, towerChild in ipairs(towersFolder:GetChildren()) do
 							local oRoot = otherEnemy:FindFirstChild("HumanoidRootPart") :: BasePart?
 							local oHum = otherEnemy:FindFirstChildOfClass("Humanoid")
 							if oRoot and oHum and oHum.Health > 0 then
-								if (oRoot.Position - targetRoot.Position).Magnitude <= tier.SplashRadius then
-									oHum:TakeDamage(dmg)
+								if (oRoot.Position - targetRoot.Position).Magnitude <= splashRadius then
+									oHum:TakeDamage(finalDamage)
 								end
 							end
 						end
 					else
-						targetHum:TakeDamage(dmg)
+						targetHum:TakeDamage(finalDamage)
 					end
 
 					task.wait(cooldown)
