@@ -9,7 +9,7 @@
 | :--- | :--- | :--- | :---: | :---: |
 | **PLAN-0001** | Core Wave Loop & Scaling Enemies | `src/Track1_WaveSystem/` | `../wt-track1-wave` (34871) | [READY_FOR_REVIEW] |
 | **PLAN-0002** | Anime Towers, Combat & Evolutions | `src/Track2_TowerSystem/` | `../wt-track2-towers` (34872) | [READY_FOR_REVIEW] |
-| **PLAN-0003** | Infinite Upgrade Server & Client HUD | `src/Track3_UpgradeServer/`, `src/Track3_UISystem/` | `../wt-track3-ui` (34873) | [READY] |
+| **PLAN-0003** | Infinite Upgrade Server & Client HUD | `src/Track3_UpgradeServer/`, `src/Track3_UISystem/` | `../wt-track3-ui` (34873) | [READY_FOR_REVIEW] |
 | **PLAN-0004** | Multi-Track Integration & Master UAT | Root / Full Workspace | `./` (34872) | [PENDING] |
 
 ## Active Implementation Checklist
