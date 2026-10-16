@@ -30,6 +30,10 @@ export type EnemySpec = {
 }
 
 local ENEMY_TYPES: { [string]: EnemySpec } = {
+	PirateGrunt = { Name = "Pirate Grunt", BaseHP = 450, Speed = 11.4, Cash = 25, Scale = 1.0, Color = Color3.fromRGB(55, 95, 65) },
+	SoruAssassin = { Name = "Soru Assassin", BaseHP = 337, Speed = 18.8, Cash = 32, Scale = 0.95, Color = Color3.fromRGB(30, 95, 190) },
+	HakiBrute = { Name = "Armored Haki Brute", BaseHP = 1260, Speed = 8.9, Cash = 50, Scale = 1.35, Color = Color3.fromRGB(22, 20, 28) },
+	YonkoBoss = { Name = "Yonko Calamity Boss", BaseHP = 3600, Speed = 8.2, Cash = 550, Scale = 2.2, Color = Color3.fromRGB(130, 18, 35) },
 	ThrillerZombie = { Name = "Thriller Bark Zombie", BaseHP = 120, Speed = 10.5, Cash = 22, Scale = 1.0, Color = Color3.fromRGB(95, 135, 105) },
 	GeneralZombie = { Name = "General Zombie", BaseHP = 420, Speed = 7.2, Cash = 55, Scale = 1.25, Color = Color3.fromRGB(75, 60, 110) },
 	CommandGeneral = { Name = "Command General", BaseHP = 280, Speed = 14.5, Cash = 70, Scale = 1.1, Color = Color3.fromRGB(185, 45, 55) },
@@ -128,70 +132,335 @@ local function awardCashToAllPlayers(baseAmount: number): ()
 end
 
 -- ============================================================================
--- 3. เสกซอมบี้โจรสลัด Thriller Bark & บอสจักรพรรดิ Kaido พร้อมระบบสโลว์หนวดขาว
+-- 3. คำนวณสเตตัสความโหดระดับ Nightmare & เสกศัตรู R6 4 ระดับ (PLAN-0007)
 -- ============================================================================
-local function spawnEnemy(enemyKey: string, waveNum: number, enemiesFolder: Folder): ()
-	local spec = ENEMY_TYPES[enemyKey] or ENEMY_TYPES.ThrillerZombie
-	local hpMult = math.pow(1.18, waveNum - 1)
-	local maxHp = math.floor(spec.BaseHP * hpMult)
+local function calculateEnemyStats(wave: number, enemyClass: string)
+	local rawHp = 450 * (1.58 ^ (wave - 1)) * (1 + math.floor(wave / 3) * 0.75)
+	local baseSpeed = math.min(24.0, 11.0 + (wave * 0.40))
+	local armorReduction = math.min(0.65, (wave - 1) * 0.03)
 
-	local model = Instance.new("Model")
-	model.Name = spec.Name
-	model:SetAttribute("HP", maxHp)
-	model:SetAttribute("MaxHP", maxHp)
-	model:SetAttribute("Speed", spec.Speed)
-	model:SetAttribute("CashReward", spec.Cash)
-	model:SetAttribute("SlowUntil", 0)
+	local canonicalClass = enemyClass
+	if enemyClass == "ThrillerZombie" then
+		canonicalClass = "PirateGrunt"
+	elseif enemyClass == "CommandGeneral" then
+		canonicalClass = "SoruAssassin"
+	elseif enemyClass == "GeneralZombie" then
+		canonicalClass = "HakiBrute"
+	elseif enemyClass == "YonkoKaido" then
+		canonicalClass = "YonkoBoss"
+	end
 
-	local root = Instance.new("Part")
-	root.Name = "HumanoidRootPart"
-	root.Size = Vector3.new(2.2 * spec.Scale, 4.2 * spec.Scale, 1.4 * spec.Scale)
-	root.Position = WAYPOINT_COORDS[1]
-	root.Anchored = true
-	root.CanCollide = false
-	root.Material = Enum.Material.SmoothPlastic
-	root.Color = spec.Color
+	local classSpec = (GameConfig.ENEMY_CLASSES and GameConfig.ENEMY_CLASSES[canonicalClass])
+
+	local hpMult = (classSpec and classSpec.HpMult) or (if canonicalClass == "SoruAssassin" then 0.75 elseif canonicalClass == "HakiBrute" then 2.8 elseif canonicalClass == "YonkoBoss" then 8.0 else 1.0)
+	local speedMult = (classSpec and classSpec.SpeedMult) or (if canonicalClass == "SoruAssassin" then 1.65 elseif canonicalClass == "HakiBrute" then 0.78 elseif canonicalClass == "YonkoBoss" then 0.72 else 1.0)
+	local scale = (classSpec and classSpec.Scale) or (if canonicalClass == "SoruAssassin" then 0.95 elseif canonicalClass == "HakiBrute" then 1.35 elseif canonicalClass == "YonkoBoss" then 2.2 else 1.0)
+	local rewardMult = (classSpec and classSpec.RewardMult) or (if canonicalClass == "SoruAssassin" then 1.3 elseif canonicalClass == "HakiBrute" then 2.0 elseif canonicalClass == "YonkoBoss" then 6.0 else 1.0)
+	local regenPerSec = (classSpec and classSpec.RegenPerSec) or (if canonicalClass == "YonkoBoss" then 0.025 else 0.0)
+	local isBoss = (classSpec and (classSpec.BossFlag or classSpec.IsBoss)) or (canonicalClass == "YonkoBoss" or enemyClass == "YonkoKaido")
+
+	local maxHp = math.floor(rawHp * hpMult)
+	local speed = baseSpeed * speedMult
+	if canonicalClass == "SoruAssassin" then
+		speed = math.min(34.0, speed)
+	elseif canonicalClass == "HakiBrute" then
+		speed = math.max(8.0, speed)
+	elseif canonicalClass == "YonkoBoss" then
+		speed = math.max(7.5, speed)
+	end
+
+	local armor = armorReduction
+	if canonicalClass == "SoruAssassin" then
+		armor = math.min(0.35, armorReduction * 0.5)
+	elseif canonicalClass == "HakiBrute" then
+		armor = math.min(0.75, armorReduction + 0.30)
+	elseif canonicalClass == "YonkoBoss" then
+		armor = math.min(0.70, armorReduction + 0.25)
+	else
+		armor = math.min(0.65, armorReduction)
+	end
+
+	local baseKillCash = (GameConfig.WAVE_SETTINGS and GameConfig.WAVE_SETTINGS.BASE_CASH_REWARD) or 25
+	local cashReward = math.floor(baseKillCash * rewardMult)
+
+	local name = (classSpec and classSpec.Name) or (if canonicalClass == "SoruAssassin" then "Soru Assassin" elseif canonicalClass == "HakiBrute" then "Armored Haki Brute" elseif canonicalClass == "YonkoBoss" then "Yonko Calamity Boss" else "Pirate Grunt")
+	local bodyColor = (classSpec and classSpec.BodyColor) or (if canonicalClass == "SoruAssassin" then Color3.fromRGB(30, 95, 190) elseif canonicalClass == "HakiBrute" then Color3.fromRGB(22, 20, 28) elseif canonicalClass == "YonkoBoss" then Color3.fromRGB(130, 18, 35) else Color3.fromRGB(55, 95, 65))
+	local auraColor = (classSpec and classSpec.AuraColor) or (if canonicalClass == "SoruAssassin" then Color3.fromRGB(0, 225, 255) elseif canonicalClass == "HakiBrute" then Color3.fromRGB(165, 40, 255) elseif canonicalClass == "YonkoBoss" then Color3.fromRGB(255, 20, 60) else Color3.fromRGB(90, 40, 140))
+
+	return {
+		CanonicalClass = canonicalClass,
+		Name = name,
+		MaxHP = maxHp,
+		Speed = speed,
+		Armor = armor,
+		Scale = scale,
+		RegenPerSec = regenPerSec,
+		Cash = cashReward,
+		BodyColor = bodyColor,
+		AuraColor = auraColor,
+		IsBoss = isBoss,
+	}
+end
+
+local function createEnemyR6Model(wave: number, enemyClass: string, stats: any): (Model, Part, Part, BillboardGui, Frame?)
+	local customTemplates = ReplicatedStorage:FindFirstChild("EnemyModels")
+	local model: Model? = nil
+
+	-- Tier 1: Check ReplicatedStorage.EnemyModels for Rojo-mounted .rbxmx models
+	if customTemplates and customTemplates:FindFirstChild(stats.CanonicalClass or enemyClass) then
+		local tmpl = customTemplates:FindFirstChild(stats.CanonicalClass or enemyClass)
+		if tmpl and tmpl:IsA("Model") then
+			model = tmpl:Clone() :: Model
+		end
+	end
+
+	-- Tier 2: Create authentic Roblox R6 Humanoid rig with HumanoidDescription
+	if not model then
+		local ok, rig = pcall(function()
+			local desc = Instance.new("HumanoidDescription")
+			desc.HeadColor = stats.BodyColor
+			desc.TorsoColor = Color3.fromRGB(30, 32, 42)
+			desc.LeftArmColor = stats.BodyColor
+			desc.RightArmColor = stats.BodyColor
+			desc.LeftLegColor = Color3.fromRGB(25, 25, 30)
+			desc.RightLegColor = Color3.fromRGB(25, 25, 30)
+			return Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R6)
+		end)
+		if ok and rig and rig:IsA("Model") then
+			model = rig
+		end
+	end
+
+	-- Tier 3: Procedural Model Fallback for Headless CLI Unit Tests
+	if not model then
+		model = Instance.new("Model")
+		local root = Instance.new("Part")
+		root.Name = "HumanoidRootPart"
+		root.Size = Vector3.new(2, 2, 1) * stats.Scale
+		root.Position = WAYPOINT_COORDS[1]
+		root.Anchored = true
+		root.CanCollide = false
+		root.Color = stats.BodyColor
+		root.Parent = model
+
+		local head = Instance.new("Part")
+		head.Name = "Head"
+		head.Size = Vector3.new(1.2, 1.2, 1.2) * stats.Scale
+		head.Position = root.Position + Vector3.new(0, 2.0 * stats.Scale, 0)
+		head.Anchored = true
+		head.CanCollide = false
+		head.Color = stats.BodyColor
+		head.Parent = model
+
+		local hum = Instance.new("Humanoid")
+		hum.Parent = model
+		model.PrimaryPart = root
+	end
+
+	model.Name = stats.Name
+
+	-- Ensure PrimaryPart and RootPart exist
+	local root = model:FindFirstChild("HumanoidRootPart") :: Part? or model.PrimaryPart :: Part?
+	if not root then
+		root = Instance.new("Part")
+		root.Name = "HumanoidRootPart"
+		root.Size = Vector3.new(2, 2, 1) * stats.Scale
+		root.Position = WAYPOINT_COORDS[1]
+		root.Anchored = true
+		root.CanCollide = false
+		root.Parent = model
+	end
 	root.Parent = model
+	model.PrimaryPart = root
 
-	local head = Instance.new("Part")
-	head.Name = "Head"
-	head.Size = Vector3.new(1.6 * spec.Scale, 1.6 * spec.Scale, 1.6 * spec.Scale)
-	head.Position = root.Position + Vector3.new(0, 2.9 * spec.Scale, 0)
-	head.Anchored = true
-	head.CanCollide = false
-	head.Color = Color3.fromRGB(215, 225, 205)
-	head.Parent = model
+	local head = model:FindFirstChild("Head") :: Part? or root
 
-	-- Boss Dragon Horn Aura for Kaido
-	if enemyKey == "YonkoKaido" then
+	-- Anchor all parts & disable collisions
+	pcall(function()
+		model:ScaleTo(stats.Scale)
+	end)
+	for _, desc in ipairs(model:GetDescendants()) do
+		if desc:IsA("BasePart") then
+			desc.Anchored = true
+			desc.CanCollide = false
+			desc.CanTouch = false
+		end
+	end
+
+	-- Multi-layered visual auras
+	if stats.IsBoss then
 		local aura = Instance.new("Part")
 		aura.Name = "KaidoDragonAura"
 		aura.Shape = Enum.PartType.Ball
-		aura.Size = Vector3.new(8, 8, 8)
+		aura.Size = Vector3.new(10, 10, 10)
 		aura.Position = root.Position
 		aura.Anchored = true
 		aura.CanCollide = false
 		aura.Material = Enum.Material.Neon
-		aura.Color = Color3.fromRGB(175, 50, 255)
-		aura.Transparency = 0.65
+		aura.Color = stats.AuraColor
+		aura.Transparency = 0.72
 		aura.Parent = model
+
+		local hl = Instance.new("Highlight")
+		hl.Name = "YonkoHighlight"
+		hl.FillColor = stats.BodyColor
+		hl.OutlineColor = stats.AuraColor
+		hl.FillTransparency = 0.60
+		hl.OutlineTransparency = 0.05
+		hl.Adornee = model
+		hl.Parent = model
+
+		local light = Instance.new("PointLight")
+		light.Name = "YonkoLight"
+		light.Color = stats.AuraColor
+		light.Brightness = 3.5
+		light.Range = 22
+		light.Parent = root
+
+		local particles = Instance.new("ParticleEmitter")
+		particles.Name = "ConquerorLightningSparks"
+		particles.Rate = 18
+		particles.Lifetime = NumberRange.new(0.3, 0.6)
+		particles.Color = ColorSequence.new(Color3.fromRGB(255, 40, 70), Color3.fromRGB(30, 5, 10))
+		particles.Parent = root
+	elseif stats.CanonicalClass == "SoruAssassin" then
+		local hl = Instance.new("Highlight")
+		hl.Name = "SoruHighlight"
+		hl.FillColor = Color3.fromRGB(0, 190, 255)
+		hl.OutlineColor = Color3.fromRGB(150, 240, 255)
+		hl.FillTransparency = 0.72
+		hl.OutlineTransparency = 0.20
+		hl.Adornee = model
+		hl.Parent = model
+
+		local light = Instance.new("PointLight")
+		light.Name = "SoruLight"
+		light.Color = stats.AuraColor
+		light.Brightness = 1.8
+		light.Range = 10
+		light.Parent = root
+
+		local particles = Instance.new("ParticleEmitter")
+		particles.Name = "SoruSpeedParticles"
+		particles.Rate = 14
+		particles.Lifetime = NumberRange.new(0.2, 0.4)
+		particles.Speed = NumberRange.new(4, 9)
+		particles.SpreadAngle = Vector2.new(15, 15)
+		particles.Color = ColorSequence.new(Color3.fromRGB(0, 225, 255), Color3.fromRGB(220, 255, 255))
+		particles.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
+		particles.EmissionDirection = Enum.NormalId.Back
+		particles.Parent = root
+	elseif stats.CanonicalClass == "HakiBrute" then
+		local hl = Instance.new("Highlight")
+		hl.Name = "HakiHighlight"
+		hl.FillColor = Color3.fromRGB(35, 15, 55)
+		hl.OutlineColor = Color3.fromRGB(180, 50, 255)
+		hl.FillTransparency = 0.65
+		hl.OutlineTransparency = 0.10
+		hl.Adornee = model
+		hl.Parent = model
+
+		local light = Instance.new("PointLight")
+		light.Name = "HakiLight"
+		light.Color = stats.AuraColor
+		light.Brightness = 2.2
+		light.Range = 14
+		light.Parent = root
+
+		local particles = Instance.new("ParticleEmitter")
+		particles.Name = "HakiSmokeParticles"
+		particles.Rate = 8
+		particles.Lifetime = NumberRange.new(0.5, 0.9)
+		particles.Speed = NumberRange.new(2, 5)
+		particles.SpreadAngle = Vector2.new(45, 45)
+		particles.Color = ColorSequence.new(Color3.fromRGB(165, 40, 255), Color3.fromRGB(20, 10, 30))
+		particles.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
+		particles.Parent = root
 	end
 
+	-- Micro Health Bar & BillboardGui (PLAN-0007)
 	local bb = Instance.new("BillboardGui")
-	bb.Size = UDim2.fromOffset(140, 38)
-	bb.StudsOffset = Vector3.new(0, 4.5 * spec.Scale, 0)
-	bb.AlwaysOnTop = true
+	bb.Name = "HPBarGui"
+	bb.Size = stats.IsBoss and UDim2.new(0, 96, 0, 16) or UDim2.new(0, 52, 0, 6)
+	bb.StudsOffset = Vector3.new(0, (stats.IsBoss and 3.2 or 2.4) * stats.Scale, 0)
+	bb.AlwaysOnTop = false
+	bb.MaxDistance = stats.IsBoss and 90 or 85
+	bb.Adornee = head
 	bb.Parent = root
 
-	local nameLbl = Instance.new("TextLabel")
-	nameLbl.Size = UDim2.fromScale(1, 1)
-	nameLbl.BackgroundTransparency = 0.35
-	nameLbl.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
-	nameLbl.TextColor3 = Color3.fromRGB(255, 235, 120)
-	nameLbl.Font = Enum.Font.GothamBold
-	nameLbl.TextScaled = true
-	nameLbl.Text = string.format("%s [%d HP]", spec.Name, maxHp)
-	nameLbl.Parent = bb
+	local bg = Instance.new("Frame")
+	bg.Name = "Bg"
+	bg.Size = UDim2.new(1, 0, 1, 0)
+	bg.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+	bg.BackgroundTransparency = stats.IsBoss and 0.20 or 0.25
+	bg.BorderSizePixel = 0
+	bg.Parent = bb
+
+	local bgCorner = Instance.new("UICorner")
+	bgCorner.CornerRadius = UDim.new(0, stats.IsBoss and 3 or 2)
+	bgCorner.Parent = bg
+
+	if stats.IsBoss then
+		local bgStroke = Instance.new("UIStroke")
+		bgStroke.Color = Color3.fromRGB(90, 20, 30)
+		bgStroke.Thickness = 1
+		bgStroke.Parent = bg
+	end
+
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.Size = UDim2.new(1, 0, 1, 0)
+	fill.BackgroundColor3 = stats.IsBoss and Color3.fromRGB(255, 45, 70) or Color3.fromRGB(50, 230, 110)
+	fill.BorderSizePixel = 0
+	fill.Parent = bg
+
+	local fillCorner = Instance.new("UICorner")
+	fillCorner.CornerRadius = UDim.new(0, stats.IsBoss and 3 or 2)
+	fillCorner.Parent = fill
+
+	if stats.IsBoss then
+		local title = Instance.new("TextLabel")
+		title.Name = "BossTitle"
+		title.Size = UDim2.new(1, 0, 0, 11)
+		title.Position = UDim2.new(0, 0, 0, -12)
+		title.BackgroundTransparency = 1
+		title.Font = Enum.Font.GothamBold
+		title.TextSize = 10
+		title.TextColor3 = Color3.fromRGB(255, 220, 80)
+		title.TextStrokeTransparency = 0.5
+		title.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+		title.Text = "[BOSS] YONKO CALAMITY"
+		title.Parent = bb
+	end
+
+	return model, root, head, bb, fill
+end
+
+-- ============================================================================
+-- 4. เสกศัตรูเข้าสู่สนามรบพร้อมลูปฟื้นเลือดและระบบสโลว์หนวดขาว
+-- ============================================================================
+local function spawnEnemy(enemyKey: string, waveNum: number, enemiesFolder: Folder): ()
+	local stats = calculateEnemyStats(waveNum, enemyKey)
+	local spec = {
+		Name = stats.Name,
+		BaseHP = stats.MaxHP,
+		Speed = stats.Speed,
+		Cash = stats.Cash,
+		Scale = stats.Scale,
+		Color = stats.BodyColor,
+	}
+
+	local model, root, head, bb, fill = createEnemyR6Model(waveNum, enemyKey, stats)
+
+	model:SetAttribute("HP", stats.MaxHP)
+	model:SetAttribute("MaxHP", stats.MaxHP)
+	model:SetAttribute("Speed", stats.Speed)
+	model:SetAttribute("ArmorReduction", stats.Armor)
+	model:SetAttribute("EnemyClass", stats.CanonicalClass or enemyKey)
+	model:SetAttribute("CashReward", spec.Cash)
+	model:SetAttribute("SlowUntil", 0)
+	model:SetAttribute("RegenPerSec", stats.RegenPerSec)
+	model:SetAttribute("IsBoss", stats.IsBoss)
 
 	model.PrimaryPart = root
 	model.Parent = enemiesFolder
@@ -200,13 +469,35 @@ local function spawnEnemy(enemyKey: string, waveNum: number, enemiesFolder: Fold
 
 	model:GetAttributeChangedSignal("HP"):Connect(function()
 		local currentHp = (model:GetAttribute("HP") :: number?) or 0
-		nameLbl.Text = string.format("%s [%d/%d]", spec.Name, math.max(0, math.floor(currentHp)), maxHp)
+		local maxHp = (model:GetAttribute("MaxHP") :: number?) or stats.MaxHP
+		if fill then
+			local ratio = math.clamp(currentHp / math.max(1, maxHp), 0, 1)
+			fill.Size = UDim2.new(ratio, 0, 1, 0)
+		end
 		if currentHp <= 0 and not isDead and model.Parent then
 			isDead = true
 			awardCashToAllPlayers(spec.Cash)
 			model:Destroy()
 		end
 	end)
+
+	if stats.RegenPerSec and stats.RegenPerSec > 0 then
+		task.spawn(function()
+			while model.Parent and not isDead do
+				task.wait(1.0)
+				if not model.Parent or isDead then
+					break
+				end
+				local curHp = (model:GetAttribute("HP") :: number?) or 0
+				local maxHp = (model:GetAttribute("MaxHP") :: number?) or stats.MaxHP
+				if curHp > 0 and curHp < maxHp then
+					local heal = math.floor(maxHp * stats.RegenPerSec)
+					local newHp = math.min(maxHp, curHp + heal)
+					model:SetAttribute("HP", newHp)
+				end
+			end
+		end)
+	end
 
 	task.spawn(function()
 		local stepTick = 0
@@ -226,11 +517,14 @@ local function spawnEnemy(enemyKey: string, waveNum: number, enemiesFolder: Fold
 				stepTick += 1
 				local bobOffset = math.sin(stepTick * 0.6) * 0.35
 				root.CFrame = CFrame.lookAt(nextPos + Vector3.new(0, bobOffset, 0), targetPos)
-				head.CFrame = root.CFrame * CFrame.new(0, 2.9 * spec.Scale, 0)
+				if head and head ~= root then
+					head.CFrame = root.CFrame * CFrame.new(0, 2.0 * stats.Scale, 0)
+				end
 				local kaidoAura = model:FindFirstChild("KaidoDragonAura") :: BasePart?
 				if kaidoAura then
 					kaidoAura.Position = root.Position
 				end
+				model:PivotTo(root.CFrame)
 				task.wait(0.05)
 			end
 		end
@@ -238,7 +532,7 @@ local function spawnEnemy(enemyKey: string, waveNum: number, enemiesFolder: Fold
 		if model.Parent and not isDead and ((model:GetAttribute("HP") :: number?) or 0) > 0 then
 			isDead = true
 			local curBaseHp = (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.BASE_HP) :: number?) or 1000
-			local dmgToBase = (enemyKey == "YonkoKaido") and 180 or 35
+			local dmgToBase = (enemyKey == "YonkoKaido" or stats.IsBoss) and 180 or 35
 			local newBaseHp = math.max(0, curBaseHp - dmgToBase)
 			Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.BASE_HP, newBaseHp)
 			if newBaseHp <= 0 then
@@ -266,11 +560,26 @@ local function startWaveLoop(): ()
 		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER, false)
 		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PENDING_CARD_DRAWS, 0)
 		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN, 15)
+		Workspace:SetAttribute("EarlyStartTriggered", false)
 
 		-- Phase 3 Preparation Phase: Wait up to 15s or until player summons & places their first tower
 		for prepSec = 15, 1, -1 do
+			local curPrep = (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN) :: number?) or prepSec
+			local earlyTriggered = (Workspace:GetAttribute("EarlyStartTriggered") :: boolean?) or false
+			if curPrep <= 0 or earlyTriggered then
+				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN, 0)
+				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.WAVE_STATUS, "HERO DEPLOYED! STARTING WAVE 1...")
+				task.wait(1.5)
+				break
+			end
 			Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN, prepSec)
 			if #towersFolder:GetChildren() > 0 then
+				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN, 0)
+				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.WAVE_STATUS, "HERO DEPLOYED! STARTING WAVE 1...")
+				task.wait(1.5)
+				break
+			end
+			if ((Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN) :: number?) or prepSec) <= 0 or (Workspace:GetAttribute("EarlyStartTriggered") :: boolean?) then
 				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN, 0)
 				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.WAVE_STATUS, "HERO DEPLOYED! STARTING WAVE 1...")
 				task.wait(1.5)
@@ -298,23 +607,31 @@ local function startWaveLoop(): ()
 				end
 			end
 
-			local count = 6 + math.floor(wave * 2.5)
+			-- Dynamic high-density swarm count & interval (PLAN-0007)
+			local count = 8 + math.floor(wave * 3.5)
+			local spawnInterval = math.max(0.35, 0.85 - (wave - 1) * 0.035)
 			Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.ZOMBIES_REMAINING, count)
+
+			local isBossWave = (wave % 3 == 0) or (wave >= 10)
 
 			for i = 1, count do
 				if Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER) then
 					break
 				end
-				local key = "ThrillerZombie"
+				local key = "PirateGrunt"
 				if wave % 5 == 0 and i == count then
 					key = "YonkoKaido"
-				elseif i % 5 == 0 then
-					key = "GeneralZombie"
-				elseif i % 3 == 0 then
-					key = "CommandGeneral"
+				elseif isBossWave and i == count then
+					key = "YonkoBoss"
+				elseif wave >= 3 and (i % 4 == 0) then
+					key = "HakiBrute"
+				elseif wave >= 2 and (i % 3 == 0) then
+					key = "SoruAssassin"
+				else
+					key = "PirateGrunt"
 				end
 				spawnEnemy(key, wave, enemiesFolder)
-				task.wait(0.85)
+				task.wait(spawnInterval)
 			end
 
 			while #enemiesFolder:GetChildren() > 0 and not (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER) :: boolean) do

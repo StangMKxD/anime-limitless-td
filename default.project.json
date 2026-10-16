@@ -1,33 +1,45 @@
 {
-  "name": "AnimeTowerDefenseUnlimited",
-  "tree": {
-    "$className": "DataModel",
-    "ReplicatedStorage": {
-      "$className": "ReplicatedStorage",
-      "Shared": {
-        "$path": "src/Shared"
-      }
-    },
-    "ServerScriptService": {
-      "$className": "ServerScriptService",
-      "Track1_WaveSystem": {
-        "$path": "src/Track1_WaveSystem"
-      },
-      "Track2_TowerSystem": {
-        "$path": "src/Track2_TowerSystem"
-      },
-      "Track3_UpgradeServer": {
-        "$path": "src/Track3_UpgradeServer"
-      }
-    },
-    "StarterPlayer": {
-      "$className": "StarterPlayer",
-      "StarterPlayerScripts": {
-        "$className": "StarterPlayerScripts",
-        "Track3_UISystem": {
-          "$path": "src/Track3_UISystem"
-        }
-      }
-    }
-  }
+    "name":  "AnimeTowerDefenseUnlimited",
+    "tree":  {
+                 "$className":  "DataModel",
+                 "ReplicatedStorage":  {
+                                           "$className":  "ReplicatedStorage",
+                                           "Shared":  {
+                                                          "$path":  "src/Shared"
+                                                      },
+                                           "HeroModels":  {
+                                                              "$path":  "assets/rojo/HeroModels"
+                                                          },
+                                           "EnemyModels":  {
+                                                               "$path":  "assets/rojo/EnemyModels"
+                                                           },
+                                           "MapModels":  {
+                                                             "$path":  "assets/rojo/MapModels"
+                                                         }
+                                       },
+                 "ServerScriptService":  {
+                                             "$className":  "ServerScriptService",
+                                             "Track1_WaveSystem":  {
+                                                                       "$path":  "src/Track1_WaveSystem"
+                                                                   },
+                                             "Track2_TowerSystem":  {
+                                                                        "$path":  "src/Track2_TowerSystem"
+                                                                    },
+                                             "Track3_UpgradeServer":  {
+                                                                          "$path":  "src/Track3_UpgradeServer"
+                                                                      },
+                                             "AssetKit":  {
+                                                              "$path":  "src/AssetKit"
+                                                          }
+                                         },
+                 "StarterPlayer":  {
+                                       "$className":  "StarterPlayer",
+                                       "StarterPlayerScripts":  {
+                                                                    "$className":  "StarterPlayerScripts",
+                                                                    "Track3_UISystem":  {
+                                                                                            "$path":  "src/Track3_UISystem"
+                                                                                        }
+                                                                }
+                                   }
+             }
 }

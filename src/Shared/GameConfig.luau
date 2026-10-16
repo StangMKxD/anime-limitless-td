@@ -59,6 +59,27 @@ export type BagUnit = {
 	SellValue: number,
 }
 
+export type EnemyClassSpec = {
+	Id: string,
+	Name: string,
+	MinWave: number,
+	UnlockWave: number,
+	HpMult: number,
+	SpeedMult: number,
+	MaxSpeed: number?,
+	MinSpeed: number?,
+	ArmorMod: number,
+	ArmorBonus: number,
+	MaxArmor: number,
+	Scale: number,
+	AuraColor: Color3,
+	BossFlag: boolean,
+	IsBoss: boolean,
+	RegenPerSec: number,
+	RewardMult: number,
+	BodyColor: Color3,
+}
+
 local GameConfig = {}
 
 -- =============================================================================
@@ -190,21 +211,134 @@ GameConfig.BASE_STATS = {
 
 GameConfig.WAVE_SETTINGS = {
 	INITIAL_BASE_HP = 1000,
-	BASE_ZOMBIE_HP = 120,
-	HP_GROWTH_RATE = 1.18,
+	BASE_ZOMBIE_HP = 450,
+	WAVE_HP_EXPONENT = 1.58,
+	SURGE_INTERVAL = 3,
+	SURGE_SCALE = 0.75,
+	BASE_HAKI_ARMOR_STEP = 0.03,
+	MAX_HAKI_ARMOR = 0.65,
+	HP_GROWTH_RATE = 1.18, -- Legacy alias for Phase 3 test compatibility
+	WAVE_SURGE_STEP = 0.75,
+	WAVE_SURGE_INTERVAL = 3,
+	BASE_SPEED_MIN = 11.0,
+	BASE_SPEED_INC = 0.40,
+	MAX_ZOMBIE_SPEED = 24.0,
 	BASE_ZOMBIE_SPEED = 10.5,
 	SPEED_INCREMENT_PER_WAVE = 0.25,
-	MAX_ZOMBIE_SPEED = 26,
-	BASE_CASH_REWARD = 35,
+	HAKI_ARMOR_INC = 0.03,
+	BASE_ENEMY_COUNT = 8,
+	ENEMY_COUNT_SLOPE = 3.5,
+	SPAWN_INTERVAL_MAX = 0.85,
+	SPAWN_INTERVAL_MIN = 0.35,
 	SPAWN_INTERVAL = 0.85,
 	INTERMISSION_TIME = 5,
 	PREP_COUNTDOWN = 15,
 	PrepCountdown = 15,
-	BOSS_WAVE_INTERVAL = 5,
+	BOSS_WAVE_INTERVAL = 5, -- Legacy alias for Phase 3 test compatibility
+	PHASE4_BOSS_WAVE_INTERVAL = 3,
+	BOSS_ENDLESS_START = 10,
+	BOSS_REGEN_PER_SEC = 0.025,
 	MAX_WAVES = 15,
 	MaxWaves = 15,
+	BASE_CASH_REWARD = 25,
 	EXTRA_CARD_BASE_COST = 150,
 }
+
+-- Phase 4 Endless Scaling Constants (PLAN-0007)
+GameConfig.BASE_ZOMBIE_HP = 450
+GameConfig.WAVE_HP_EXPONENT = 1.58
+GameConfig.SURGE_INTERVAL = 3
+GameConfig.SURGE_SCALE = 0.75
+GameConfig.BASE_HAKI_ARMOR_STEP = 0.03
+GameConfig.MAX_HAKI_ARMOR = 0.65
+
+-- =============================================================================
+-- 4 MONSTER CLASSES CONTRACT (PLAN-0007)
+-- =============================================================================
+
+GameConfig.ENEMY_CLASSES = {
+	PirateGrunt = {
+		Id = "PirateGrunt",
+		Name = "Pirate Grunt",
+		MinWave = 1,
+		UnlockWave = 1,
+		HpMult = 1.0,
+		SpeedMult = 1.0,
+		ArmorMod = 0.0,
+		ArmorBonus = 0.0,
+		MaxArmor = 0.65,
+		Scale = 1.0,
+		RegenPerSec = 0.0,
+		RewardMult = 1.0,
+		BodyColor = Color3.fromRGB(55, 95, 65),
+		AuraColor = Color3.fromRGB(90, 40, 140),
+		BossFlag = false,
+		IsBoss = false,
+	},
+	SoruAssassin = {
+		Id = "SoruAssassin",
+		Name = "Soru Assassin",
+		MinWave = 2,
+		UnlockWave = 2,
+		HpMult = 0.75,
+		SpeedMult = 1.65,
+		MaxSpeed = 34.0,
+		ArmorMod = -0.5,
+		ArmorBonus = -0.5,
+		MaxArmor = 0.35,
+		Scale = 0.95,
+		RegenPerSec = 0.0,
+		RewardMult = 1.3,
+		BodyColor = Color3.fromRGB(30, 95, 190),
+		AuraColor = Color3.fromRGB(0, 225, 255),
+		BossFlag = false,
+		IsBoss = false,
+	},
+	HakiBrute = {
+		Id = "HakiBrute",
+		Name = "Armored Haki Brute",
+		MinWave = 3,
+		UnlockWave = 3,
+		HpMult = 2.8,
+		SpeedMult = 0.78,
+		MinSpeed = 8.0,
+		ArmorMod = 0.30,
+		ArmorBonus = 0.30,
+		MaxArmor = 0.75,
+		Scale = 1.35,
+		RegenPerSec = 0.0,
+		RewardMult = 2.0,
+		BodyColor = Color3.fromRGB(22, 20, 28),
+		AuraColor = Color3.fromRGB(165, 40, 255),
+		BossFlag = false,
+		IsBoss = false,
+	},
+	YonkoBoss = {
+		Id = "YonkoBoss",
+		Name = "Yonko Calamity Boss",
+		MinWave = 3,
+		UnlockWave = 3,
+		HpMult = 8.0,
+		SpeedMult = 0.72,
+		MinSpeed = 7.5,
+		ArmorMod = 0.25,
+		ArmorBonus = 0.25,
+		MaxArmor = 0.70,
+		Scale = 2.2,
+		RegenPerSec = 0.025,
+		RewardMult = 6.0,
+		BodyColor = Color3.fromRGB(130, 18, 35),
+		AuraColor = Color3.fromRGB(255, 20, 60),
+		BossFlag = true,
+		IsBoss = true,
+	},
+}
+
+-- Backward compatibility aliases for legacy enemy lookups
+GameConfig.ENEMY_CLASSES.ThrillerZombie = GameConfig.ENEMY_CLASSES.PirateGrunt
+GameConfig.ENEMY_CLASSES.CommandGeneral = GameConfig.ENEMY_CLASSES.SoruAssassin
+GameConfig.ENEMY_CLASSES.GeneralZombie = GameConfig.ENEMY_CLASSES.HakiBrute
+GameConfig.ENEMY_CLASSES.YonkoKaido = GameConfig.ENEMY_CLASSES.YonkoBoss
 
 -- Standard Workspace Folders
 GameConfig.FOLDERS = {
