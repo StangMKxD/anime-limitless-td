@@ -94,8 +94,25 @@ local function hideLegacyParts(model: Model, cosmeticModel: Model)
 	end
 end
 
+local function removeSkinIfTrack2Claimed(model: Model)
+	if model:GetAttribute("Track2RigOwned") then
+		local cosmetic = model:FindFirstChild("AssetKitVisuals")
+		if cosmetic then
+			cosmetic:Destroy()
+		end
+		for _, desc in ipairs(model:GetDescendants()) do
+			if desc:IsA("WeldConstraint") and desc.Name == "AssetKitRootWeld" then
+				desc:Destroy()
+			elseif desc:IsA("BasePart") and desc.Transparency == 1 and desc.Name ~= "AuraRing" and desc.Name ~= "RangeIndicator" then
+				desc.Transparency = 0
+			end
+		end
+		installed[model] = nil
+	end
+end
+
 local function attachSkin(model: Model, libraryFolder: Instance?, skinName: string)
-	if installed[model] or model:GetAttribute("AssetKitSkinned") then
+	if installed[model] or model:GetAttribute("AssetKitSkinned") or model:GetAttribute("Track2RigOwned") then
 		return
 	end
 	local root = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
@@ -156,8 +173,16 @@ local function watchActiveModels(workspaceFolderName: string, library: Instance,
 			if not child:IsA("Model") then
 				return
 			end
+			-- Skip immediately if Track2 owns this model's rig
+			if child:GetAttribute("Track2RigOwned") then
+				return
+			end
+			-- Guard against asynchronous Track2 ownership claim
+			child:GetAttributeChangedSignal("Track2RigOwned"):Connect(function()
+				removeSkinIfTrack2Claimed(child)
+			end)
 			task.defer(function()
-				if not child.Parent then
+				if not child.Parent or child:GetAttribute("Track2RigOwned") then
 					return
 				end
 				local skinName = resolve(child)

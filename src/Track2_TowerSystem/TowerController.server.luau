@@ -337,6 +337,10 @@ local function buildDetailedOnePieceModel(
 	model:SetAttribute("SlotId", slotId)
 	model:SetAttribute("BaseY", slotPos.Y + 2.5)
 	model:SetAttribute("IsAttacking", false)
+	model:SetAttribute("Track2RigOwned", true)
+	model:SetAttribute("RigReady", true)
+	model:SetAttribute("VisualSource", "Track2")
+	model:SetAttribute("RigVersion", "5.0.0")
 
 	-- 1. HumanoidRootPart (Anchored = true, CanCollide = false)
 	local root = Instance.new("Part")
@@ -867,6 +871,10 @@ local function tryLoadFromHeroModels(
 	model:SetAttribute("IsAttacking", false)
 	model:SetAttribute("AssetKitSkinned", true)
 	model:SetAttribute("IsArticulatedRig", true)
+	model:SetAttribute("Track2RigOwned", true)
+	model:SetAttribute("RigReady", true)
+	model:SetAttribute("VisualSource", "Track2")
+	model:SetAttribute("RigVersion", "5.0.0")
 
 	attachHakiAuraEmitter(root, heroSpec.PrimaryColor, heroSpec.SecondaryColor)
 
@@ -973,6 +981,10 @@ local function tryLoadFromHumanoidDescription(
 	model:SetAttribute("BaseY", slotPos.Y + 2.5)
 	model:SetAttribute("IsAttacking", false)
 	model:SetAttribute("AssetKitSkinned", true)
+	model:SetAttribute("Track2RigOwned", true)
+	model:SetAttribute("RigReady", true)
+	model:SetAttribute("VisualSource", "Track2")
+	model:SetAttribute("RigVersion", "5.0.0")
 
 	attachHakiAuraEmitter(root, heroSpec.PrimaryColor, heroSpec.SecondaryColor)
 
@@ -2510,7 +2522,10 @@ task.spawn(function()
 
 						-- 5-Phase Attack Choreography with Hitstop & Impact VFX
 						execute5PhaseAttack(tower, spec, impactPos, function()
-							playOnePieceUltimateVFX(tower, spec, impactPos)
+							-- Fire-and-forget protected visual VFX invocation (does not block damage on error)
+							pcall(function()
+								playOnePieceUltimateVFX(tower, spec, impactPos)
+							end)
 
 							-- Critical & Splash Damage Resolution
 							local isCrit = (math.random() < math.clamp(critChance, 0, 0.95))

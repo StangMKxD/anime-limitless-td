@@ -76,3 +76,28 @@ Static file/XML/Git: inspected ตามรายการข้างต้น;
   - `node tests/run_all_tests.mjs`: 44 / 44 PASSED (100.0%)
   - `node tests/combat_oracle_verification.test.mjs`: 22 / 22 PASSED (100.0%)
   - Internal Gate Status: PASS (worker_m0_1, reviewer_m0_1, reviewer_m0_2, challenger_m0_1, challenger_m0_2, auditor_m0_1 all APPROVED/CLEAN)
+
+## Milestone M1 Completion Notes (`P5-07`..`P5-17`)
+
+- **Status**: [READY_FOR_REVIEW] (Internal Gate: PASS)
+- **Active Branch**: `phase5/implementer-took-dev`
+- **Execution Base SHA**: `44026faf294e378207f231e2ced5832847e352be`
+- **Deliverables Completed & Locked**:
+  - `P5-07`: Established Single Visual Ownership Seam between `VisualBridge.server.luau` and `TowerController.server.luau` using `Track2RigOwned` attribute to prevent duplicate skinning and rigid weld conflicts.
+  - `P5-08`: Implemented idempotent semantic RigBuilder in `src/Track2_TowerSystem/AnimationController.luau` supporting 6/9 semantic joints, multi-part limb groups, accessory parenting, and unanchored children.
+  - `P5-09`: Implemented deterministic procedural animation player with rest-pose snapshot caching (`BaseC0`, `BaseC1`, `BaseSize`, `BaseAttachments`), transport controls (Play, Pause, Stop, Replay, Seek, Step, Speed, Loop), zero cumulative drift (`delta < 0.001`), and `_FallbackProfile.luau` in `AnimationRegistry.luau`.
+  - `P5-10`: Implemented centralized `VFXDispatcher.luau` and `_FallbackVFX.luau` with owner ledger, quality preset throttling (`Low`, `Medium`, `High`), layer toggles, intensity scaling, connection cleanup on completion, and 100% resource disposal on model cleanup/destruction.
+  - `P5-11`: Fully decoupled combat oracle loop in `TowerController.server.luau` with locked 0.31s nominal impact timer (`0.14s + 0.10s + 0.07s`) operating fire-and-forget from visual animation/VFX.
+  - `P5-12`: Created `AnimationLabBootstrap.server.luau` with strict `RunService:IsStudio()` guard, production safety, and Studio developer menu bootstrap.
+  - `P5-13`: Implemented isolated Dual-Preview Stage (`Workspace.__AnimationLabSandbox` at Y=5000), lighting rig, grid, and `OrbitCameraController.luau` with front/side/back/focus presets and smooth damping.
+  - `P5-14`: Created `TimelineController.luau` featuring 5-phase animation scrubber (`Idle -> Windup -> Attack -> Impact -> Recovery`), transport controls, speed scaling, and deterministic scrubbing.
+  - `P5-15`: Implemented 19-asset Model Explorer and `ModelValidator.luau` inspecting real template hierarchies, joint mobility, animation/VFX profile resolution, and truthful labeling of Map Assets as `N/A (Static Map Asset)`.
+  - `P5-16`: Implemented `TelemetryOverlay.luau` and `StressTestRunner.luau` with 1/10/25/50 character stress test modes, live FPS/frame time tracking, active parts/joints/particles counters, and automated post-test leak verification.
+  - `P5-17`: Built comprehensive verification suite `tests/phase5_core_and_lab.spec.luau` and `tests/phase5_core_and_lab.test.mjs` verifying contracts, rig builder, animation kinematics, VFX lifecycle, combat decoupling, camera math, lab config, validator truthfulness, and stress runner mechanics.
+- **Verification Evidence**:
+  - `node tests/run_all_tests.mjs`: 44 / 44 PASSED (100.0%)
+  - `node tests/combat_oracle_verification.test.mjs`: 22 / 22 PASSED (100.0%)
+  - `node tests/phase5_core_and_lab.test.mjs`: 82 / 82 PASSED (100.0%)
+  - `lune run tests/phase5_core_and_lab.spec`: 21 / 21 PASSED (100.0%)
+  - `rojo sourcemap default.project.json`: Exit code 0 (JSON valid)
+  - Internal Gate Status: PASS (worker_m1_3, reviewer_m1_iter3_1, reviewer_m1_iter3_2, challenger_m1_iter3_1, challenger_m1_iter3_2, auditor_m1_iter3_1 all APPROVED/CLEAN)

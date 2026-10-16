@@ -8,6 +8,9 @@ if not RunService:IsStudio() then
 	return {}
 end
 
+local AnimationLab = script:FindFirstChild("AnimationLab")
+
 return {
 	Version = "5.0.0",
+	AnimationLab = if AnimationLab then require(AnimationLab :: any) else nil,
 }
