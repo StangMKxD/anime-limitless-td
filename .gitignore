@@ -3,6 +3,7 @@
 *.rbxlx
 *.rbxm
 *.rbxmx
+!assets/rojo/**/*.rbxmx
 
 # Rojo and local files
 .rojo/
