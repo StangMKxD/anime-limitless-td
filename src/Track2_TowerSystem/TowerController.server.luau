@@ -87,11 +87,81 @@ end
 -- DATA LOOKUP & INVENTORY SERIALIZATION HELPERS
 -- =============================================================================
 
+local STRAW_HAT_FALLBACKS: { [string]: any } = {
+	Tower_Nami_Zeus = {
+		Id = "Tower_Nami_Zeus",
+		Name = "NAMI",
+		Subtitle = "WEATHER EMPRESS [ZEUS]",
+		Rarity = "LEGENDARY HAKI",
+		Weight = 14,
+		DamageMult = 1.70,
+		RangeBonus = 12,
+		CooldownMult = 0.82,
+		SplashBonus = 6,
+		SellValue = 260,
+		AttackStyle = "ZeusBreezeTempo",
+		Onomatopoeia = "ZEUS!! (สายฟ้าพิโรธ!!)",
+		PrimaryColor = Color3.fromRGB(255, 160, 30),
+		SecondaryColor = Color3.fromRGB(255, 230, 80),
+	},
+	Tower_Usopp_Kabuto = {
+		Id = "Tower_Usopp_Kabuto",
+		Name = "USOPP",
+		Subtitle = "GOD USOPP [KURO KABUTO]",
+		Rarity = "LEGENDARY HAKI",
+		Weight = 14,
+		DamageMult = 1.65,
+		RangeBonus = 18,
+		CooldownMult = 0.90,
+		SplashBonus = 5,
+		SellValue = 250,
+		AttackStyle = "FirebirdStar",
+		Onomatopoeia = "FIREBIRD!! (วิหคเพลิงสไนเปอร์!!)",
+		PrimaryColor = Color3.fromRGB(215, 140, 45),
+		SecondaryColor = Color3.fromRGB(50, 215, 120),
+	},
+	Tower_Chopper_Monster = {
+		Id = "Tower_Chopper_Monster",
+		Name = "TONY TONY CHOPPER",
+		Subtitle = "MONSTER POINT",
+		Rarity = "EPIC HAKI",
+		Weight = 22,
+		DamageMult = 1.85,
+		RangeBonus = 2,
+		CooldownMult = 1.05,
+		SplashBonus = 7,
+		SellValue = 150,
+		AttackStyle = "MonsterPoint",
+		Onomatopoeia = "MONSTER!! (ฝ่ามืออสูรยักษ์!!)",
+		PrimaryColor = Color3.fromRGB(240, 110, 150),
+		SecondaryColor = Color3.fromRGB(255, 215, 120),
+	},
+	Tower_Robin_Demonio = {
+		Id = "Tower_Robin_Demonio",
+		Name = "NICO ROBIN",
+		Subtitle = "DEMONIO FLEUR",
+		Rarity = "LEGENDARY HAKI",
+		Weight = 14,
+		DamageMult = 1.80,
+		RangeBonus = 8,
+		CooldownMult = 0.85,
+		SplashBonus = 6,
+		SellValue = 260,
+		AttackStyle = "DemonioFleur",
+		Onomatopoeia = "CLAP!! (มือปีศาจทมิฬ!!)",
+		PrimaryColor = Color3.fromRGB(130, 40, 185),
+		SecondaryColor = Color3.fromRGB(25, 15, 45),
+	},
+}
+
 local function getHeroSpec(heroId: string): any
 	for _, spec in ipairs(GameConfig.HERO_CATALOG) do
 		if spec.Id == heroId then
 			return spec
 		end
+	end
+	if STRAW_HAT_FALLBACKS[heroId] then
+		return STRAW_HAT_FALLBACKS[heroId]
 	end
 	return GameConfig.HERO_CATALOG[1]
 end
@@ -166,6 +236,78 @@ local function updatePadVisual(slotId: string)
 end
 
 -- =============================================================================
+-- AUTHENTIC ASSETKIT ALIASES & PROCEDURAL HELPERS
+-- =============================================================================
+
+local HERO_ALIASES: { [string]: string } = {
+	Tower_Luffy_G5 = "Luffy",
+	Tower_Shanks_Kamusari = "Shanks",
+	Tower_Whitebeard_Gura = "Whitebeard",
+	Tower_Zoro_KingOfHell = "Zoro",
+	Tower_Ace_Entei = "Ace",
+	Tower_Law_KRoom = "Law",
+	Tower_Kizaru_Pika = "Kizaru",
+	Tower_Sanji_Ifrit = "Sanji",
+	Tower_Nami_Zeus = "Nami",
+	Tower_Usopp_Kabuto = "Usopp",
+	Tower_Chopper_Monster = "Chopper",
+	Tower_Robin_Demonio = "Robin",
+	Luffy = "Luffy",
+	MonkeyDLuffy = "Luffy",
+	MonkeyDLuffyModel = "Luffy",
+	Zoro = "Zoro",
+	RoronoaZoro = "Zoro",
+	RoronoaZoroModel = "Zoro",
+	Sanji = "Sanji",
+	VinsmokeSanji = "Sanji",
+	Shanks = "Shanks",
+	RedHairedShanks = "Shanks",
+	Whitebeard = "Whitebeard",
+	EdwardNewgate = "Whitebeard",
+	Ace = "Ace",
+	PortgasDAce = "Ace",
+	Law = "Law",
+	TrafalgarLaw = "Law",
+	Kizaru = "Kizaru",
+	Borsalino = "Kizaru",
+	Nami = "Nami",
+	Usopp = "Usopp",
+	Chopper = "Chopper",
+	Robin = "Robin",
+}
+
+local function sanitizeImportedModel(model: Model)
+	for _, part in ipairs(model:GetDescendants()) do
+		if part:IsA("Script") or part:IsA("LocalScript") then
+			part:Destroy()
+		end
+	end
+end
+
+local function attachHakiAuraEmitter(rootPart: BasePart, primaryColor: Color3, secondaryColor: Color3): ParticleEmitter
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Name = "HakiAuraParticles"
+	emitter.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, primaryColor),
+		ColorSequenceKeypoint.new(1, secondaryColor),
+	})
+	emitter.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.4),
+		NumberSequenceKeypoint.new(1, 1.8),
+	})
+	emitter.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.3),
+		NumberSequenceKeypoint.new(1, 1.0),
+	})
+	emitter.Rate = 28
+	emitter.Lifetime = NumberRange.new(0.4, 0.8)
+	emitter.Speed = NumberRange.new(4, 9)
+	emitter.SpreadAngle = Vector2.new(45, 45)
+	emitter.Parent = rootPart
+	return emitter
+end
+
+-- =============================================================================
 -- PROCEDURAL R6 RIG BUILDER & DISTINCT ONE PIECE HERO ACCESSORIES (F-01 RIGGED)
 -- =============================================================================
 
@@ -195,6 +337,7 @@ local function buildDetailedOnePieceModel(
 	root.Material = Enum.Material.SmoothPlastic
 	root.Color = heroSpec.PrimaryColor
 	root.Parent = model
+	attachHakiAuraEmitter(root, heroSpec.PrimaryColor, heroSpec.SecondaryColor)
 
 	-- 2. Peach Skin Head (Rigged via WeldConstraint to Root)
 	local head = Instance.new("Part")
@@ -263,23 +406,30 @@ local function buildDetailedOnePieceModel(
 	auraHighlight.FillTransparency = 0.55
 	auraHighlight.Parent = model
 
-	-- 8. Status BillboardGui on Head
+	-- 8. Zero-Clutter Status BillboardGui on Head (TowerStatGui)
 	local statusBb = Instance.new("BillboardGui")
-	statusBb.Name = "TowerStatusGui"
-	statusBb.Size = UDim2.fromOffset(180, 48)
-	statusBb.StudsOffset = Vector3.new(0, 4.2, 0)
-	statusBb.AlwaysOnTop = true
+	statusBb.Name = "TowerStatGui" -- statusBb.Name = "TowerStatusGui"
+	statusBb.Size = UDim2.new(0, 90, 0, 22)
+	statusBb.StudsOffset = Vector3.new(0, 2.6, 0)
+	statusBb.AlwaysOnTop = false
+	statusBb.MaxDistance = 38
+	statusBb.Enabled = false
 	statusBb.Parent = head
 
 	local titleLbl = Instance.new("TextLabel")
+	titleLbl.Name = "InfoText"
 	titleLbl.Size = UDim2.fromScale(1, 1)
-	titleLbl.BackgroundTransparency = 0.25
-	titleLbl.BackgroundColor3 = Color3.fromRGB(12, 12, 20)
+	titleLbl.BackgroundTransparency = 0.35
+	titleLbl.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
 	titleLbl.TextColor3 = heroSpec.PrimaryColor
-	titleLbl.Font = Enum.Font.GothamBlack
+	titleLbl.Font = Enum.Font.GothamBold
 	titleLbl.TextScaled = true
-	titleLbl.Text = string.format("[%s]\n%s", heroSpec.Rarity, heroSpec.Name)
+	titleLbl.Text = string.format("[%s] %s", heroSpec.Rarity, heroSpec.Name)
 	titleLbl.Parent = statusBb
+
+	local titleCorner = Instance.new("UICorner")
+	titleCorner.CornerRadius = UDim.new(0, 4)
+	titleCorner.Parent = titleLbl
 
 	-- 9. Procedural Signature Accessories for each of the 8 One Piece Heroes (Rigged via WeldConstraint)
 	local style = heroSpec.AttackStyle
@@ -468,6 +618,263 @@ local function buildDetailedOnePieceModel(
 end
 
 -- =============================================================================
+-- 3-TIER HYBRID MODEL LOADER (P1: RBXMX -> P2: R6 RIG -> P3: CLI FALLBACK)
+-- =============================================================================
+
+local function tryLoadFromHeroModels(
+	heroSpec: any,
+	slotPos: Vector3,
+	ownerUserId: number,
+	unitUid: string,
+	slotId: string
+): Model?
+	local heroFolder = ReplicatedStorage:FindFirstChild("HeroModels")
+	if not heroFolder then
+		return nil
+	end
+	local templateName = HERO_ALIASES[heroSpec.Id] or heroSpec.Id
+	local template = heroFolder:FindFirstChild(templateName) or heroFolder:FindFirstChild(heroSpec.Id)
+	if not template or not template:IsA("Model") then
+		for _, child in ipairs(heroFolder:GetChildren()) do
+			if child:IsA("Model") and (child.Name == templateName or string.find(string.lower(child.Name), string.lower(templateName), 1, true)) then
+				template = child
+				break
+			end
+		end
+	end
+	if not template or not template:IsA("Model") then
+		return nil
+	end
+
+	local model = template:Clone()
+	model.Name = heroSpec.Id .. "_" .. slotId
+	sanitizeImportedModel(model)
+
+	-- Resolve or create HumanoidRootPart
+	local root = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
+	if not root or not root:IsA("BasePart") then
+		root = Instance.new("Part")
+		root.Name = "HumanoidRootPart"
+		root.Size = Vector3.new(2.2, 2.4, 1.2)
+		root.Position = slotPos + Vector3.new(0, 2.5, 0)
+		root.Anchored = true
+		root.CanCollide = false
+		root.Material = Enum.Material.SmoothPlastic
+		root.Color = heroSpec.PrimaryColor
+		root.Parent = model
+	else
+		root.Anchored = true
+		root.CanCollide = false
+		model:PivotTo(CFrame.new(slotPos + Vector3.new(0, 2.5, 0)))
+	end
+
+	-- Unanchor and weld all constituent parts to HRP via WeldConstraint ("AssetKitRootWeld")
+	for _, part in ipairs(model:GetDescendants()) do
+		if part:IsA("BasePart") and part ~= root then
+			part.Anchored = false
+			part.CanCollide = false
+			part.CanTouch = false
+			part.CanQuery = false
+			part.Massless = true
+			local weld = Instance.new("WeldConstraint")
+			weld.Name = "AssetKitRootWeld"
+			weld.Part0 = root
+			weld.Part1 = part
+			weld.Parent = part
+		end
+	end
+
+	model:SetAttribute("HeroId", heroSpec.Id)
+	model:SetAttribute("UnitUid", unitUid)
+	model:SetAttribute("OwnerUserId", ownerUserId)
+	model:SetAttribute("SlotId", slotId)
+	model:SetAttribute("BaseY", slotPos.Y + 2.5)
+	model:SetAttribute("IsAttacking", false)
+	model:SetAttribute("AssetKitSkinned", true)
+
+	attachHakiAuraEmitter(root, heroSpec.PrimaryColor, heroSpec.SecondaryColor)
+
+	-- Zero-Clutter Tower Head Nameplate (TowerStatGui)
+	local statusBb = Instance.new("BillboardGui")
+	statusBb.Name = "TowerStatGui" -- statusBb.Name = "TowerStatusGui"
+	statusBb.Size = UDim2.new(0, 90, 0, 22)
+	statusBb.StudsOffset = Vector3.new(0, 2.6, 0)
+	statusBb.AlwaysOnTop = false
+	statusBb.MaxDistance = 38
+	statusBb.Enabled = false
+	statusBb.Parent = root
+
+	local titleLbl = Instance.new("TextLabel")
+	titleLbl.Name = "InfoText"
+	titleLbl.Size = UDim2.fromScale(1, 1)
+	titleLbl.BackgroundTransparency = 0.35
+	titleLbl.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
+	titleLbl.TextColor3 = heroSpec.PrimaryColor
+	titleLbl.Font = Enum.Font.GothamBold
+	titleLbl.TextScaled = true
+	titleLbl.Text = string.format("[%s] %s", heroSpec.Rarity, heroSpec.Name)
+	titleLbl.Parent = statusBb
+
+	local titleCorner = Instance.new("UICorner")
+	titleCorner.CornerRadius = UDim.new(0, 4)
+	titleCorner.Parent = titleLbl
+
+	-- Aura ring & Highlight
+	local auraRing = Instance.new("Part")
+	auraRing.Name = "AuraRing"
+	auraRing.Shape = Enum.PartType.Cylinder
+	auraRing.Size = Vector3.new(0.35, 6.5, 6.5)
+	auraRing.CFrame = CFrame.new(slotPos + Vector3.new(0, 0.4, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	auraRing.Anchored = true
+	auraRing.CanCollide = false
+	auraRing.Material = Enum.Material.Neon
+	auraRing.Color = heroSpec.SecondaryColor
+	auraRing.Transparency = 0.35
+	auraRing.Parent = model
+
+	local auraHighlight = Instance.new("Highlight")
+	auraHighlight.Name = "AnimeAura"
+	auraHighlight.FillColor = heroSpec.PrimaryColor
+	auraHighlight.OutlineColor = heroSpec.SecondaryColor
+	auraHighlight.FillTransparency = 0.55
+	auraHighlight.Parent = model
+
+	model.Destroying:Connect(function()
+		lastAttackTime[model] = nil
+	end)
+
+	model.PrimaryPart = root
+	model.Parent = towersFolder
+	return model
+end
+
+local function tryLoadFromHumanoidDescription(
+	heroSpec: any,
+	slotPos: Vector3,
+	ownerUserId: number,
+	unitUid: string,
+	slotId: string
+): Model?
+	local ok, model = pcall(function()
+		local desc = Instance.new("HumanoidDescription")
+		return Players:CreateHumanoidModelFromDescription(desc, Enum.HumanoidRigType.R6)
+	end)
+	if not ok or not model or not model:IsA("Model") then
+		return nil
+	end
+
+	model.Name = heroSpec.Id .. "_" .. slotId
+	local root = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
+	if not root or not root:IsA("BasePart") then
+		model:Destroy()
+		return nil
+	end
+
+	root.Anchored = true
+	root.CanCollide = false
+	model:PivotTo(CFrame.new(slotPos + Vector3.new(0, 2.5, 0)))
+
+	for _, part in ipairs(model:GetDescendants()) do
+		if part:IsA("BasePart") and part ~= root then
+			part.Anchored = false
+			part.CanCollide = false
+			part.CanTouch = false
+			part.CanQuery = false
+			part.Massless = true
+			local weld = Instance.new("WeldConstraint")
+			weld.Name = "AssetKitRootWeld"
+			weld.Part0 = root
+			weld.Part1 = part
+			weld.Parent = part
+		end
+	end
+
+	model:SetAttribute("HeroId", heroSpec.Id)
+	model:SetAttribute("UnitUid", unitUid)
+	model:SetAttribute("OwnerUserId", ownerUserId)
+	model:SetAttribute("SlotId", slotId)
+	model:SetAttribute("BaseY", slotPos.Y + 2.5)
+	model:SetAttribute("IsAttacking", false)
+	model:SetAttribute("AssetKitSkinned", true)
+
+	attachHakiAuraEmitter(root, heroSpec.PrimaryColor, heroSpec.SecondaryColor)
+
+	local statusBb = Instance.new("BillboardGui")
+	statusBb.Name = "TowerStatGui" -- statusBb.Name = "TowerStatusGui"
+	statusBb.Size = UDim2.new(0, 90, 0, 22)
+	statusBb.StudsOffset = Vector3.new(0, 2.6, 0)
+	statusBb.AlwaysOnTop = false
+	statusBb.MaxDistance = 38
+	statusBb.Enabled = false
+	statusBb.Parent = root
+
+	local titleLbl = Instance.new("TextLabel")
+	titleLbl.Name = "InfoText"
+	titleLbl.Size = UDim2.fromScale(1, 1)
+	titleLbl.BackgroundTransparency = 0.35
+	titleLbl.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
+	titleLbl.TextColor3 = heroSpec.PrimaryColor
+	titleLbl.Font = Enum.Font.GothamBold
+	titleLbl.TextScaled = true
+	titleLbl.Text = string.format("[%s] %s", heroSpec.Rarity, heroSpec.Name)
+	titleLbl.Parent = statusBb
+
+	local titleCorner = Instance.new("UICorner")
+	titleCorner.CornerRadius = UDim.new(0, 4)
+	titleCorner.Parent = titleLbl
+
+	local auraRing = Instance.new("Part")
+	auraRing.Name = "AuraRing"
+	auraRing.Shape = Enum.PartType.Cylinder
+	auraRing.Size = Vector3.new(0.35, 6.5, 6.5)
+	auraRing.CFrame = CFrame.new(slotPos + Vector3.new(0, 0.4, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	auraRing.Anchored = true
+	auraRing.CanCollide = false
+	auraRing.Material = Enum.Material.Neon
+	auraRing.Color = heroSpec.SecondaryColor
+	auraRing.Transparency = 0.35
+	auraRing.Parent = model
+
+	local auraHighlight = Instance.new("Highlight")
+	auraHighlight.Name = "AnimeAura"
+	auraHighlight.FillColor = heroSpec.PrimaryColor
+	auraHighlight.OutlineColor = heroSpec.SecondaryColor
+	auraHighlight.FillTransparency = 0.55
+	auraHighlight.Parent = model
+
+	model.Destroying:Connect(function()
+		lastAttackTime[model] = nil
+	end)
+
+	model.PrimaryPart = root
+	model.Parent = towersFolder
+	return model
+end
+
+local function loadAuthenticHeroModel(
+	heroSpec: any,
+	slotPos: Vector3,
+	ownerUserId: number,
+	unitUid: string,
+	slotId: string
+): Model
+	-- Priority 1: Clone authentic .rbxmx XML model from ReplicatedStorage.HeroModels
+	local m1 = tryLoadFromHeroModels(heroSpec, slotPos, ownerUserId, unitUid, slotId)
+	if m1 then
+		return m1
+	end
+
+	-- Priority 2: Authentic Players:CreateHumanoidModelFromDescription R6 rig
+	local m2 = tryLoadFromHumanoidDescription(heroSpec, slotPos, ownerUserId, unitUid, slotId)
+	if m2 then
+		return m2
+	end
+
+	-- Priority 3: Headless CLI procedural fallback (buildDetailedOnePieceModel)
+	return buildDetailedOnePieceModel(heroSpec, slotPos, ownerUserId, unitUid, slotId)
+end
+
+-- =============================================================================
 -- 3D MANGA ONOMATOPOEIA BILLBOARD SYSTEM (GOTHAM BLACK & BACK.OUT TWEEN)
 -- =============================================================================
 
@@ -589,7 +996,7 @@ local function playOnePieceUltimateVFX(heroModel: Model, heroSpec: any, targetPo
 		local portal = Instance.new("Part")
 		portal.Name = "NikaSkyPortal"
 		portal.Shape = Enum.PartType.Cylinder
-		portal.Size = Vector3.new(1.2, 22, 22)
+		portal.Size = Vector3.new(1.2, 36, 36)
 		portal.CFrame = CFrame.new(targetPos + Vector3.new(0, 34, 0)) * CFrame.Angles(0, 0, math.rad(90))
 		portal.Anchored = true
 		portal.CanCollide = false
@@ -600,7 +1007,7 @@ local function playOnePieceUltimateVFX(heroModel: Model, heroSpec: any, targetPo
 		local giantFist = Instance.new("Part")
 		giantFist.Name = "BajrangGiantFist"
 		giantFist.Shape = Enum.PartType.Ball
-		giantFist.Size = Vector3.new(14, 14, 14)
+		giantFist.Size = Vector3.new(26, 26, 26)
 		giantFist.Position = targetPos + Vector3.new(0, 34, 0)
 		giantFist.Anchored = true
 		giantFist.CanCollide = false
@@ -619,8 +1026,30 @@ local function playOnePieceUltimateVFX(heroModel: Model, heroSpec: any, targetPo
 		shockwave.Color = Color3.fromRGB(255, 45, 95)
 		shockwave.Parent = Workspace
 
+		local shockwave2 = Instance.new("Part")
+		shockwave2.Name = "ShockwaveRing_2"
+		shockwave2.Shape = Enum.PartType.Cylinder
+		shockwave2.Size = Vector3.new(0.4, 4, 4)
+		shockwave2.CFrame = CFrame.new(targetPos + Vector3.new(0, 0.6, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		shockwave2.Anchored = true
+		shockwave2.CanCollide = false
+		shockwave2.Material = Enum.Material.Neon
+		shockwave2.Color = Color3.fromRGB(255, 120, 150)
+		shockwave2.Parent = Workspace
+
+		local shockwave3 = Instance.new("Part")
+		shockwave3.Name = "ShockwaveRing_3"
+		shockwave3.Shape = Enum.PartType.Cylinder
+		shockwave3.Size = Vector3.new(0.3, 4, 4)
+		shockwave3.CFrame = CFrame.new(targetPos + Vector3.new(0, 0.7, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		shockwave3.Anchored = true
+		shockwave3.CanCollide = false
+		shockwave3.Material = Enum.Material.Neon
+		shockwave3.Color = Color3.fromRGB(255, 255, 255)
+		shockwave3.Parent = Workspace
+
 		TweenService:Create(portal, TweenInfo.new(0.35), {
-			Size = Vector3.new(0.1, 30, 30),
+			Size = Vector3.new(0.1, 44, 44),
 			Transparency = 1,
 		}):Play()
 
@@ -630,14 +1059,24 @@ local function playOnePieceUltimateVFX(heroModel: Model, heroSpec: any, targetPo
 		}):Play()
 
 		TweenService:Create(shockwave, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-			Size = Vector3.new(0.2, 34, 34),
+			Size = Vector3.new(0.2, 35, 35),
+			Transparency = 1,
+		}):Play()
+		TweenService:Create(shockwave2, TweenInfo.new(0.42, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Size = Vector3.new(0.15, 28, 28),
+			Transparency = 1,
+		}):Play()
+		TweenService:Create(shockwave3, TweenInfo.new(0.46, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Size = Vector3.new(0.1, 20, 20),
 			Transparency = 1,
 		}):Play()
 
 		Debris:AddItem(portal, 0.45)
 		Debris:AddItem(giantFist, 0.55)
 		Debris:AddItem(shockwave, 0.45)
-		spawnHakiLightningBolts(targetPos, Color3.fromRGB(255, 20, 65), 12)
+		Debris:AddItem(shockwave2, 0.50)
+		Debris:AddItem(shockwave3, 0.52)
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(255, 20, 65), 10)
 
 	-- -------------------------------------------------------------------------
 	-- STYLE 2: KAMUSARI (RED-HAIRED SHANKS - DIVINE DEPARTURE)
@@ -646,7 +1085,7 @@ local function playOnePieceUltimateVFX(heroModel: Model, heroSpec: any, targetPo
 		local forwardDir = (targetPos - startPos).Unit
 		local crescent = Instance.new("Part")
 		crescent.Name = "KamusariCrescentSlash"
-		crescent.Size = Vector3.new(18, 1.4, 9)
+		crescent.Size = Vector3.new(42, 1.4, 9)
 		crescent.CFrame = CFrame.lookAt(startPos, targetPos) * CFrame.Angles(0, 0, math.rad(35))
 		crescent.Anchored = true
 		crescent.CanCollide = false
@@ -659,7 +1098,7 @@ local function playOnePieceUltimateVFX(heroModel: Model, heroSpec: any, targetPo
 
 		TweenService:Create(crescent, TweenInfo.new(0.30, Enum.EasingStyle.Linear), {
 			CFrame = destCF,
-			Size = Vector3.new(28, 2.2, 14),
+			Size = Vector3.new(48, 2.2, 14),
 			Transparency = 1,
 		}):Play()
 
@@ -675,13 +1114,32 @@ local function playOnePieceUltimateVFX(heroModel: Model, heroSpec: any, targetPo
 		shockwave.Parent = Workspace
 
 		TweenService:Create(shockwave, TweenInfo.new(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-			Size = Vector3.new(0.1, 28, 28),
+			Size = Vector3.new(0.1, 32, 32),
 			Transparency = 1,
 		}):Play()
 
+		for i = 1, 12 do
+			local angle = math.rad((360 / 12) * i + math.random(-10, 10))
+			local strikePos = targetPos + Vector3.new(math.cos(angle) * math.random(4, 16), 0, math.sin(angle) * math.random(4, 16))
+			local strike = Instance.new("Part")
+			strike.Name = "VerticalHakiStrike"
+			strike.Size = Vector3.new(0.5, 24, 0.5)
+			strike.Position = strikePos + Vector3.new(0, 12, 0)
+			strike.Anchored = true
+			strike.CanCollide = false
+			strike.Material = Enum.Material.Neon
+			strike.Color = Color3.fromRGB(255, 25, 55)
+			strike.Parent = Workspace
+			TweenService:Create(strike, TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Transparency = 1,
+				Size = Vector3.new(0.05, 24, 0.05),
+			}):Play()
+			Debris:AddItem(strike, 0.35)
+		end
+
 		Debris:AddItem(crescent, 0.38)
 		Debris:AddItem(shockwave, 0.40)
-		spawnHakiLightningBolts(targetPos, Color3.fromRGB(255, 25, 55), 10)
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(255, 25, 55), 12)
 
 	-- -------------------------------------------------------------------------
 	-- STYLE 3: GURA QUAKE (EDWARD NEWGATE - WHITEBEARD)
@@ -749,25 +1207,49 @@ local function playOnePieceUltimateVFX(heroModel: Model, heroSpec: any, targetPo
 	-- STYLE 4: KING OF HELL 360 (RORONOA ZORO - ENMA TORNADO)
 	-- -------------------------------------------------------------------------
 	elseif style == "KingOfHell360" then
-		local tornado = Instance.new("Part")
-		tornado.Name = "KingOfHellTornado"
-		tornado.Shape = Enum.PartType.Cylinder
-		tornado.Size = Vector3.new(18, 12, 12)
-		tornado.CFrame = CFrame.new(targetPos + Vector3.new(0, 6, 0)) * CFrame.Angles(0, 0, math.rad(90))
-		tornado.Anchored = true
-		tornado.CanCollide = false
-		tornado.Material = Enum.Material.Neon
-		tornado.Color = Color3.fromRGB(40, 255, 120)
-		tornado.Transparency = 0.25
-		tornado.Parent = Workspace
+		-- Triple emerald/purple dragon tornados 38 studs tall
+		for t = 1, 3 do
+			local offsetAngle = math.rad((360 / 3) * t)
+			local tOffset = Vector3.new(math.cos(offsetAngle) * 5, 0, math.sin(offsetAngle) * 5)
+			local tornado = Instance.new("Part")
+			tornado.Name = "KingOfHellTornado"
+			tornado.Shape = Enum.PartType.Cylinder
+			tornado.Size = Vector3.new(38, 12, 12)
+			tornado.CFrame = CFrame.new(targetPos + tOffset + Vector3.new(0, 14, 0)) * CFrame.Angles(0, 0, math.rad(90))
+			tornado.Anchored = true
+			tornado.CanCollide = false
+			tornado.Material = Enum.Material.Neon
+			tornado.Color = (t % 2 == 1) and Color3.fromRGB(40, 255, 120) or Color3.fromRGB(165, 55, 255)
+			tornado.Transparency = 0.25
+			tornado.Parent = Workspace
 
-		TweenService:Create(tornado, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-			Size = Vector3.new(28, 22, 22),
-			Transparency = 1,
-		}):Play()
+			TweenService:Create(tornado, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+				Size = Vector3.new(44, 20, 20),
+				Transparency = 1,
+			}):Play()
+			Debris:AddItem(tornado, 0.50)
+		end
 
-		Debris:AddItem(tornado, 0.50)
-		spawnHakiLightningBolts(targetPos, Color3.fromRGB(165, 55, 255), 8)
+		-- Dual cross-slash (30-44 studs wide)
+		for s = 1, 2 do
+			local slash = Instance.new("Part")
+			slash.Name = "YonkoCrossSlash"
+			slash.Size = Vector3.new(38, 1.2, 2.4)
+			slash.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0)) * CFrame.Angles(0, math.rad((s - 1) * 90 + 45), math.rad(30))
+			slash.Anchored = true
+			slash.CanCollide = false
+			slash.Material = Enum.Material.Neon
+			slash.Color = Color3.fromRGB(165, 55, 255)
+			slash.Parent = Workspace
+
+			TweenService:Create(slash, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+				Size = Vector3.new(44, 1.8, 3.6),
+				Transparency = 1,
+			}):Play()
+			Debris:AddItem(slash, 0.42)
+		end
+
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(165, 55, 255), 10)
 
 	-- -------------------------------------------------------------------------
 	-- STYLE 5: ENTEI (PORTGAS D. ACE - FLAME EMPEROR SUN)
@@ -808,6 +1290,7 @@ local function playOnePieceUltimateVFX(heroModel: Model, heroSpec: any, targetPo
 
 		Debris:AddItem(sunBall, 0.45)
 		Debris:AddItem(fireShock, 0.42)
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(255, 120, 20), 8)
 
 	-- -------------------------------------------------------------------------
 	-- STYLE 6: GAMMA KNIFE (TRAFALGAR LAW - K-ROOM)
@@ -847,7 +1330,7 @@ local function playOnePieceUltimateVFX(heroModel: Model, heroSpec: any, targetPo
 
 		Debris:AddItem(roomDome, 0.50)
 		Debris:AddItem(giantSword, 0.45)
-		spawnHakiLightningBolts(targetPos, Color3.fromRGB(60, 220, 255), 6)
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(60, 220, 255), 8)
 
 	-- -------------------------------------------------------------------------
 	-- STYLE 7: YASAKANI LIGHT (ADMIRAL KIZARU - BORSALINO)
@@ -875,16 +1358,18 @@ local function playOnePieceUltimateVFX(heroModel: Model, heroSpec: any, targetPo
 				Debris:AddItem(beam, 0.32)
 			end
 		end
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(255, 240, 75), 8)
 
 	-- -------------------------------------------------------------------------
 	-- STYLE 8: BOEUF BURST (VINSMOKE SANJI - IFRIT JAMBE)
 	-- -------------------------------------------------------------------------
 	elseif style == "BoeufBurst" then
+		-- 42 studs cobalt plasma pillar
 		local pillar = Instance.new("Part")
 		pillar.Name = "BoeufBurstPillar"
 		pillar.Shape = Enum.PartType.Cylinder
-		pillar.Size = Vector3.new(22, 9, 9)
-		pillar.CFrame = CFrame.new(targetPos + Vector3.new(0, 8, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		pillar.Size = Vector3.new(42, 10, 10)
+		pillar.CFrame = CFrame.new(targetPos + Vector3.new(0, 16, 0)) * CFrame.Angles(0, 0, math.rad(90))
 		pillar.Anchored = true
 		pillar.CanCollide = false
 		pillar.Material = Enum.Material.Neon
@@ -892,12 +1377,298 @@ local function playOnePieceUltimateVFX(heroModel: Model, heroSpec: any, targetPo
 		pillar.Parent = Workspace
 
 		TweenService:Create(pillar, TweenInfo.new(0.40, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-			Size = Vector3.new(28, 18, 18),
+			Size = Vector3.new(48, 18, 18),
 			Transparency = 1,
 		}):Play()
-
 		Debris:AddItem(pillar, 0.45)
-		spawnHakiLightningBolts(targetPos, Color3.fromRGB(220, 245, 255), 6)
+
+		-- 4-tier fire rings: HellFireRing_1, HellFireRing_2, HellFireRing_3, HellFireRing_4 (16, 24, 32, 40 studs)
+		local ringRadii = { 16, 24, 32, 40 }
+		for idx, rad in ipairs(ringRadii) do
+			local ring = Instance.new("Part")
+			ring.Name = "HellFireRing_" .. idx
+			ring.Shape = Enum.PartType.Cylinder
+			ring.Size = Vector3.new(0.4, 4, 4)
+			ring.CFrame = CFrame.new(targetPos + Vector3.new(0, 0.3 * idx, 0)) * CFrame.Angles(0, 0, math.rad(90))
+			ring.Anchored = true
+			ring.CanCollide = false
+			ring.Material = Enum.Material.Neon
+			ring.Color = (idx % 2 == 1) and Color3.fromRGB(35, 155, 255) or Color3.fromRGB(220, 245, 255)
+			ring.Parent = Workspace
+
+			TweenService:Create(ring, TweenInfo.new(0.35 + idx * 0.04, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+				Size = Vector3.new(0.1, rad, rad),
+				Transparency = 1,
+			}):Play()
+			Debris:AddItem(ring, 0.45 + idx * 0.05)
+		end
+
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(35, 180, 255), 8)
+
+	-- -------------------------------------------------------------------------
+	-- STYLE 9: ZEUS BREEZE TEMPO (NAMI - WEATHER EMPRESS)
+	-- -------------------------------------------------------------------------
+	elseif style == "ZeusBreezeTempo" then
+		-- Giant dark storm cloud overhead 28x8x28 studs with glowing eyes
+		local cloud = Instance.new("Part")
+		cloud.Name = "ZeusStormCloud"
+		cloud.Shape = Enum.PartType.Ball
+		cloud.Size = Vector3.new(28, 8, 28)
+		cloud.Position = targetPos + Vector3.new(0, 24, 0)
+		cloud.Anchored = true
+		cloud.CanCollide = false
+		cloud.Material = Enum.Material.Neon
+		cloud.Color = Color3.fromRGB(30, 32, 45)
+		cloud.Parent = Workspace
+
+		for eye = 1, 2 do
+			local eyeGlow = Instance.new("Part")
+			eyeGlow.Name = "ZeusEyeGlow_" .. eye
+			eyeGlow.Size = Vector3.new(1.2, 1.2, 1.2)
+			eyeGlow.Position = cloud.Position + Vector3.new((eye == 1 and -4 or 4), -1.5, 10)
+			eyeGlow.Anchored = true
+			eyeGlow.CanCollide = false
+			eyeGlow.Material = Enum.Material.Neon
+			eyeGlow.Color = Color3.fromRGB(255, 230, 80)
+			eyeGlow.Parent = Workspace
+			TweenService:Create(eyeGlow, TweenInfo.new(0.40), { Transparency = 1 }):Play()
+			Debris:AddItem(eyeGlow, 0.45)
+		end
+
+		TweenService:Create(cloud, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Size = Vector3.new(34, 10, 34),
+			Transparency = 1,
+		}):Play()
+		Debris:AddItem(cloud, 0.50)
+
+		-- 8 golden lightning bolts striking down
+		for b = 1, 8 do
+			local angle = math.rad((360 / 8) * b + math.random(-15, 15))
+			local hitGround = targetPos + Vector3.new(math.cos(angle) * math.random(4, 14), 0, math.sin(angle) * math.random(4, 14))
+			local bolt = Instance.new("Part")
+			bolt.Name = "ZeusLightningBolt"
+			bolt.Size = Vector3.new(0.6, 24, 0.6)
+			bolt.CFrame = CFrame.lookAt(cloud.Position, hitGround) * CFrame.new(0, 0, -12)
+			bolt.Anchored = true
+			bolt.CanCollide = false
+			bolt.Material = Enum.Material.Neon
+			bolt.Color = Color3.fromRGB(255, 235, 75)
+			bolt.Parent = Workspace
+			TweenService:Create(bolt, TweenInfo.new(0.32), { Transparency = 1, Size = Vector3.new(0.05, 24, 0.05) }):Play()
+			Debris:AddItem(bolt, 0.38)
+		end
+
+		-- 32 studs electric ring
+		local elecRing = Instance.new("Part")
+		elecRing.Name = "ZeusElectricRing"
+		elecRing.Shape = Enum.PartType.Cylinder
+		elecRing.Size = Vector3.new(0.4, 4, 4)
+		elecRing.CFrame = CFrame.new(targetPos + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		elecRing.Anchored = true
+		elecRing.CanCollide = false
+		elecRing.Material = Enum.Material.Neon
+		elecRing.Color = Color3.fromRGB(255, 235, 80)
+		elecRing.Parent = Workspace
+		TweenService:Create(elecRing, TweenInfo.new(0.40, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Size = Vector3.new(0.1, 32, 32),
+			Transparency = 1,
+		}):Play()
+		Debris:AddItem(elecRing, 0.45)
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(255, 235, 80), 8)
+
+	-- -------------------------------------------------------------------------
+	-- STYLE 10: FIREBIRD STAR (USOPP - GOD USOPP)
+	-- -------------------------------------------------------------------------
+	elseif style == "FirebirdStar" then
+		-- Giant firebird projectile 14x14x18 studs
+		local bird = Instance.new("Part")
+		bird.Name = "FirebirdProjectile"
+		bird.Size = Vector3.new(14, 14, 18)
+		bird.CFrame = CFrame.lookAt(startPos + Vector3.new(0, 10, 0), targetPos)
+		bird.Anchored = true
+		bird.CanCollide = false
+		bird.Material = Enum.Material.Neon
+		bird.Color = Color3.fromRGB(255, 85, 20)
+		bird.Parent = Workspace
+
+		TweenService:Create(bird, TweenInfo.new(0.28, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+			Position = targetPos,
+			Size = Vector3.new(18, 18, 22),
+			Transparency = 1,
+		}):Play()
+		Debris:AddItem(bird, 0.35)
+
+		-- 6 emerald skull burst bushes
+		for s = 1, 6 do
+			local angle = math.rad((360 / 6) * s)
+			local sPos = targetPos + Vector3.new(math.cos(angle) * 8, 2, math.sin(angle) * 8)
+			local skull = Instance.new("Part")
+			skull.Name = "PopGreenSkull_" .. s
+			skull.Shape = Enum.PartType.Ball
+			skull.Size = Vector3.new(4, 4, 4)
+			skull.Position = sPos
+			skull.Anchored = true
+			skull.CanCollide = false
+			skull.Material = Enum.Material.Neon
+			skull.Color = Color3.fromRGB(45, 225, 110)
+			skull.Parent = Workspace
+			TweenService:Create(skull, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+				Size = Vector3.new(14, 14, 14),
+				Transparency = 1,
+			}):Play()
+			Debris:AddItem(skull, 0.42)
+		end
+
+		-- 30 studs blast ring
+		local blastRing = Instance.new("Part")
+		blastRing.Name = "FirebirdBlastRing"
+		blastRing.Shape = Enum.PartType.Cylinder
+		blastRing.Size = Vector3.new(0.4, 4, 4)
+		blastRing.CFrame = CFrame.new(targetPos + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		blastRing.Anchored = true
+		blastRing.CanCollide = false
+		blastRing.Material = Enum.Material.Neon
+		blastRing.Color = Color3.fromRGB(255, 120, 30)
+		blastRing.Parent = Workspace
+		TweenService:Create(blastRing, TweenInfo.new(0.38, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Size = Vector3.new(0.1, 30, 30),
+			Transparency = 1,
+		}):Play()
+		Debris:AddItem(blastRing, 0.42)
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(255, 100, 25), 8)
+
+	-- -------------------------------------------------------------------------
+	-- STYLE 11: MONSTER POINT (TONY TONY CHOPPER)
+	-- -------------------------------------------------------------------------
+	elseif style == "MonsterPoint" then
+		-- Colossal pink-gold paw ground slam 28 studs diameter
+		local paw = Instance.new("Part")
+		paw.Name = "MonsterPointPaw"
+		paw.Shape = Enum.PartType.Cylinder
+		paw.Size = Vector3.new(6, 28, 28)
+		paw.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		paw.Anchored = true
+		paw.CanCollide = false
+		paw.Material = Enum.Material.Neon
+		paw.Color = Color3.fromRGB(255, 140, 180)
+		paw.Parent = Workspace
+
+		TweenService:Create(paw, TweenInfo.new(0.35, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+			Position = targetPos + Vector3.new(0, 0.5, 0),
+			Transparency = 0.8,
+		}):Play()
+		Debris:AddItem(paw, 0.45)
+
+		-- 4 crater debris rocks erupting diagonally
+		for r = 1, 4 do
+			local angle = math.rad(45 + (r - 1) * 90)
+			local rock = Instance.new("Part")
+			rock.Name = "CraterDebris_" .. r
+			rock.Size = Vector3.new(3, 3, 3)
+			rock.Position = targetPos + Vector3.new(math.cos(angle) * 4, 1, math.sin(angle) * 4)
+			rock.Anchored = true
+			rock.CanCollide = false
+			rock.Color = Color3.fromRGB(75, 75, 85)
+			rock.Parent = Workspace
+			TweenService:Create(rock, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				Position = rock.Position + Vector3.new(math.cos(angle) * 8, 6, math.sin(angle) * 8),
+				Transparency = 1,
+			}):Play()
+			Debris:AddItem(rock, 0.48)
+		end
+
+		-- Double shock rings 34 studs
+		for sr = 1, 2 do
+			local ring = Instance.new("Part")
+			ring.Name = "MonsterShockRing_" .. sr
+			ring.Shape = Enum.PartType.Cylinder
+			ring.Size = Vector3.new(0.4, 4, 4)
+			ring.CFrame = CFrame.new(targetPos + Vector3.new(0, 0.4 * sr, 0)) * CFrame.Angles(0, 0, math.rad(90))
+			ring.Anchored = true
+			ring.CanCollide = false
+			ring.Material = Enum.Material.Neon
+			ring.Color = (sr == 1) and Color3.fromRGB(255, 160, 200) or Color3.fromRGB(255, 225, 120)
+			ring.Parent = Workspace
+			TweenService:Create(ring, TweenInfo.new(0.40 + sr * 0.05, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+				Size = Vector3.new(0.1, 34, 34),
+				Transparency = 1,
+			}):Play()
+			Debris:AddItem(ring, 0.48)
+		end
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(255, 160, 200), 8)
+
+	-- -------------------------------------------------------------------------
+	-- STYLE 12: DEMONIO FLEUR (NICO ROBIN)
+	-- -------------------------------------------------------------------------
+	elseif style == "DemonioFleur" then
+		-- Dual giant dark-purple demon arms 32 studs tall rising from earth on flanks clapping together
+		local armL = Instance.new("Part")
+		armL.Name = "DemonArmLeft"
+		armL.Size = Vector3.new(4, 32, 6)
+		armL.Position = targetPos + Vector3.new(-16, -6, 0)
+		armL.Anchored = true
+		armL.CanCollide = false
+		armL.Material = Enum.Material.Neon
+		armL.Color = Color3.fromRGB(90, 25, 140)
+		armL.Parent = Workspace
+
+		local armR = Instance.new("Part")
+		armR.Name = "DemonArmRight"
+		armR.Size = Vector3.new(4, 32, 6)
+		armR.Position = targetPos + Vector3.new(16, -6, 0)
+		armR.Anchored = true
+		armR.CanCollide = false
+		armR.Material = Enum.Material.Neon
+		armR.Color = Color3.fromRGB(90, 25, 140)
+		armR.Parent = Workspace
+
+		TweenService:Create(armL, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = targetPos + Vector3.new(-2, 10, 0),
+		}):Play()
+		TweenService:Create(armR, TweenInfo.new(0.28, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = targetPos + Vector3.new(2, 10, 0),
+		}):Play()
+
+		Debris:AddItem(armL, 0.45)
+		Debris:AddItem(armR, 0.45)
+
+		-- Distortion dome 32 studs
+		local dome = Instance.new("Part")
+		dome.Name = "DemonioClapDome"
+		dome.Shape = Enum.PartType.Ball
+		dome.Size = Vector3.new(4, 4, 4)
+		dome.Position = targetPos + Vector3.new(0, 8, 0)
+		dome.Anchored = true
+		dome.CanCollide = false
+		dome.Material = Enum.Material.ForceField
+		dome.Color = Color3.fromRGB(150, 45, 215)
+		dome.Transparency = 0.25
+		dome.Parent = Workspace
+
+		TweenService:Create(dome, TweenInfo.new(0.40, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Size = Vector3.new(32, 32, 32),
+			Transparency = 1,
+		}):Play()
+		Debris:AddItem(dome, 0.48)
+
+		-- Petal ring 36 studs
+		local petalRing = Instance.new("Part")
+		petalRing.Name = "DemonioPetalRing"
+		petalRing.Shape = Enum.PartType.Cylinder
+		petalRing.Size = Vector3.new(0.4, 4, 4)
+		petalRing.CFrame = CFrame.new(targetPos + Vector3.new(0, 0.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+		petalRing.Anchored = true
+		petalRing.CanCollide = false
+		petalRing.Material = Enum.Material.Neon
+		petalRing.Color = Color3.fromRGB(190, 60, 245)
+		petalRing.Parent = Workspace
+
+		TweenService:Create(petalRing, TweenInfo.new(0.42, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+			Size = Vector3.new(0.1, 36, 36),
+			Transparency = 1,
+		}):Play()
+		Debris:AddItem(petalRing, 0.48)
+		spawnHakiLightningBolts(targetPos, Color3.fromRGB(165, 45, 220), 8)
 	end
 end
 
@@ -917,9 +1688,7 @@ local function execute5PhaseAttack(
 	end
 	local rightArm = tower:FindFirstChild("RightArm") :: BasePart?
 	local weapon = tower:FindFirstChild("SignatureWeapon") :: BasePart?
-	if not rightArm or not weapon then
-		return
-	end
+	local hasLimbs = (rightArm ~= nil and weapon ~= nil)
 
 	tower:SetAttribute("IsAttacking", true)
 	local startPos = root.Position
@@ -932,12 +1701,14 @@ local function execute5PhaseAttack(
 	-- Phase 1: Wind-Up Anticipation (0.14s)
 	local windUpCF = lookCF * CFrame.Angles(math.rad(-14), 0, 0)
 	TweenService:Create(root, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = windUpCF }):Play()
-	TweenService:Create(rightArm, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Position = startPos + Vector3.new(0.4, 2.2, 0.6),
-	}):Play()
-	TweenService:Create(weapon, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-		Position = startPos + Vector3.new(0.4, 2.7, -1.2),
-	}):Play()
+	if hasLimbs and rightArm and weapon then
+		TweenService:Create(rightArm, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Position = startPos + Vector3.new(0.4, 2.2, 0.6),
+		}):Play()
+		TweenService:Create(weapon, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Position = startPos + Vector3.new(0.4, 2.7, -1.2),
+		}):Play()
+	end
 
 	task.delay(0.14, function()
 		if not tower.Parent or not root.Parent then
@@ -948,12 +1719,14 @@ local function execute5PhaseAttack(
 		local dashPos = startPos + fwdDir * 3.2
 		local dashCF = CFrame.lookAt(dashPos, dashPos + fwdDir) * CFrame.Angles(math.rad(18), 0, 0)
 		TweenService:Create(root, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), { CFrame = dashCF }):Play()
-		TweenService:Create(rightArm, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
-			Position = dashPos + fwdDir * 1.8 + Vector3.new(0, 0.4, 0),
-		}):Play()
-		TweenService:Create(weapon, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
-			Position = dashPos + fwdDir * 1.8 + Vector3.new(0, 0.9, -1.8),
-		}):Play()
+		if hasLimbs and rightArm and weapon then
+			TweenService:Create(rightArm, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+				Position = dashPos + fwdDir * 1.8 + Vector3.new(0, 0.4, 0),
+			}):Play()
+			TweenService:Create(weapon, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+				Position = dashPos + fwdDir * 1.8 + Vector3.new(0, 0.9, -1.8),
+			}):Play()
+		end
 
 		task.delay(0.10, function()
 			if not tower.Parent or not root.Parent then
@@ -985,18 +1758,24 @@ local function execute5PhaseAttack(
 					-- Phase 5: Recoil & Return to Base Pad Position (0.22s)
 					local basePos = Vector3.new(startPos.X, baseY, startPos.Z)
 					local returnCF = CFrame.lookAt(basePos, basePos + fwdDir)
-					local returnArmPos = basePos + returnCF:VectorToWorldSpace(Vector3.new(1.55, 0, 0))
 					TweenService:Create(root, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = returnCF }):Play()
-					TweenService:Create(rightArm, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-						Position = returnArmPos,
-					}):Play()
-					TweenService:Create(weapon, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-						Position = returnArmPos + Vector3.new(0, 0.5, -1.8),
-					}):Play()
+					if hasLimbs and rightArm and weapon then
+						local returnArmPos = basePos + returnCF:VectorToWorldSpace(Vector3.new(1.55, 0, 0))
+						TweenService:Create(rightArm, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+							Position = returnArmPos,
+						}):Play()
+						TweenService:Create(weapon, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+							Position = returnArmPos + Vector3.new(0, 0.5, -1.8),
+						}):Play()
+					end
 
 					task.delay(0.22, function()
-						if tower.Parent and root.Parent and rightArm.Parent and weapon.Parent then
-							weapon.Position = rightArm.Position + Vector3.new(0, 0.5, -1.8)
+						if hasLimbs and rightArm and weapon then
+							if tower.Parent and root.Parent and rightArm.Parent and weapon.Parent then
+								weapon.Position = rightArm.Position + Vector3.new(0, 0.5, -1.8)
+							end
+						end
+						if tower.Parent and root.Parent then
 							tower:SetAttribute("IsAttacking", false)
 						end
 					end)
@@ -1077,7 +1856,7 @@ local function placeOrSwapTowerOnSlot(player: Player, slotId: string, requestedU
 	end
 
 	local heroSpec = getHeroSpec(chosenUnit.HeroId)
-	local newModel = buildDetailedOnePieceModel(heroSpec, slotSpec.Position, player.UserId, chosenUnit.Uid, slotId)
+	local newModel = loadAuthenticHeroModel(heroSpec, slotSpec.Position, player.UserId, chosenUnit.Uid, slotId)
 	slotOccupants[slotId] = newModel
 
 	spawnHakiLightningBolts(slotSpec.Position, heroSpec.SecondaryColor, 8)
@@ -1196,7 +1975,32 @@ for _, slotSpec in ipairs(GameConfig.PLACEMENT_SLOTS) do
 	cd.MaxActivationDistance = 120
 	cd.Parent = pad
 	cd.MouseClick:Connect(function(player: Player)
+		local occupant = slotOccupants[slotSpec.SlotId]
+		if occupant and occupant.Parent then
+			local statGui = occupant:FindFirstChild("TowerStatGui", true) or occupant:FindFirstChild("TowerStatusGui", true)
+			if statGui and statGui:IsA("BillboardGui") then
+				statGui.Enabled = not statGui.Enabled
+			end
+		end
 		placeOrSwapTowerOnSlot(player, slotSpec.SlotId, nil)
+	end)
+	cd.MouseHoverEnter:Connect(function()
+		local occupant = slotOccupants[slotSpec.SlotId]
+		if occupant and occupant.Parent then
+			local statGui = occupant:FindFirstChild("TowerStatGui", true) or occupant:FindFirstChild("TowerStatusGui", true)
+			if statGui and statGui:IsA("BillboardGui") then
+				statGui.Enabled = true
+			end
+		end
+	end)
+	cd.MouseHoverLeave:Connect(function()
+		local occupant = slotOccupants[slotSpec.SlotId]
+		if occupant and occupant.Parent then
+			local statGui = occupant:FindFirstChild("TowerStatGui", true) or occupant:FindFirstChild("TowerStatusGui", true)
+			if statGui and statGui:IsA("BillboardGui") then
+				statGui.Enabled = false
+			end
+		end
 	end)
 
 	slotPadParts[slotSpec.SlotId] = pad
@@ -1413,7 +2217,8 @@ task.spawn(function()
 									local d = (enemy.PrimaryPart.Position - impactPos).Magnitude
 									if d <= finalSplash then
 										local curHp = (enemy:GetAttribute("HP") :: number?) or 0
-										enemy:SetAttribute("HP", math.max(0, curHp - dmg))
+										local effectiveDmg = math.max(1, math.floor(dmg * math.clamp(1.0 - (enemy:GetAttribute("ArmorReduction") or 0), 0.25, 1.0)))
+										enemy:SetAttribute("HP", math.max(0, curHp - effectiveDmg))
 
 										-- Whitebeard Gura Quake Slow Debuff (0.45x for 2.5s)
 										if spec.AttackStyle == "GuraQuake" then
