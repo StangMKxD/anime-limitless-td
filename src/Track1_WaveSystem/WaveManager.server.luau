@@ -211,6 +211,7 @@ local function createEnemyR6Model(wave: number, enemyClass: string, stats: any):
 		local tmpl = customTemplates:FindFirstChild(stats.CanonicalClass or enemyClass)
 		if tmpl and tmpl:IsA("Model") then
 			model = tmpl:Clone() :: Model
+			model:SetAttribute("AssetKitSkinned", true)
 		end
 	end
 
@@ -501,6 +502,36 @@ local function spawnEnemy(enemyKey: string, waveNum: number, enemiesFolder: Fold
 
 	task.spawn(function()
 		local stepTick = 0
+
+		-- Cache relative offsets for articulated walking locomotion
+		local headRelOffsets: { [BasePart]: CFrame } = {}
+		local leftLegOffsets: { [BasePart]: CFrame } = {}
+		local rightLegOffsets: { [BasePart]: CFrame } = {}
+		local leftArmOffsets: { [BasePart]: CFrame } = {}
+		local rightArmOffsets: { [BasePart]: CFrame } = {}
+
+		local hipLPos = root.CFrame * CFrame.new(-0.53 * stats.Scale, -0.60 * stats.Scale, 0)
+		local hipRPos = root.CFrame * CFrame.new(0.53 * stats.Scale, -0.60 * stats.Scale, 0)
+		local shLPos = root.CFrame * CFrame.new(-1.39 * stats.Scale, 0.75 * stats.Scale, 0)
+		local shRPos = root.CFrame * CFrame.new(1.39 * stats.Scale, 0.75 * stats.Scale, 0)
+
+		for _, desc in ipairs(model:GetDescendants()) do
+			if desc:IsA("BasePart") and desc ~= root then
+				local pName = desc.Name
+				if head and head ~= root and (pName == "Neck" or string.find(pName, "Nose") or string.find(pName, "Ear") or string.find(pName, "Eye") or string.find(pName, "Pupil") or string.find(pName, "Teeth") or string.find(pName, "Mouth") or string.find(pName, "Smile") or string.find(pName, "Smirk") or string.find(pName, "Jaw") or string.find(pName, "Chin") or string.find(pName, "Fang") or string.find(pName, "Bevel") or string.find(pName, "Hair") or string.find(pName, "Spike") or string.find(pName, "Bandana") or string.find(pName, "Mask") or string.find(pName, "Horn")) then
+					headRelOffsets[desc] = head.CFrame:ToObjectSpace(desc.CFrame)
+				elseif (string.find(pName, "_2") and (string.find(pName, "Thigh") or string.find(pName, "Shin") or string.find(pName, "Leg") or string.find(pName, "Boot") or string.find(pName, "Toe"))) or (string.find(pName, "ShortsCuff") and desc.Position.X >= root.Position.X) then
+					rightLegOffsets[desc] = hipRPos:ToObjectSpace(desc.CFrame)
+				elseif ((string.find(pName, "Thigh") or string.find(pName, "Shin") or string.find(pName, "Leg") or string.find(pName, "Boot") or string.find(pName, "Toe")) and not string.find(pName, "_2")) or (string.find(pName, "ShortsCuff") and desc.Position.X < root.Position.X) then
+					leftLegOffsets[desc] = hipLPos:ToObjectSpace(desc.CFrame)
+				elseif (string.find(pName, "_2") and (string.find(pName, "Shoulder") or string.find(pName, "Arm") or string.find(pName, "Forearm") or string.find(pName, "Fist") or string.find(pName, "Knuckle") or string.find(pName, "Sleeve") or string.find(pName, "Hand"))) or string.find(pName, "Bone") or string.find(pName, "ClawBlade_2") or string.find(pName, "Kanabo") or string.find(pName, "BlackHakiFist") then
+					rightArmOffsets[desc] = shRPos:ToObjectSpace(desc.CFrame)
+				elseif ((string.find(pName, "Shoulder") or string.find(pName, "Arm") or string.find(pName, "Forearm") or string.find(pName, "Fist") or string.find(pName, "Knuckle") or string.find(pName, "Sleeve") or string.find(pName, "Hand")) and not string.find(pName, "_2")) or (string.find(pName, "ClawBlade") and not string.find(pName, "_2")) then
+					leftArmOffsets[desc] = shLPos:ToObjectSpace(desc.CFrame)
+				end
+			end
+		end
+
 		for i = 2, #WAYPOINT_COORDS do
 			local targetPos = WAYPOINT_COORDS[i]
 			while model.Parent and not isDead and ((model:GetAttribute("HP") :: number?) or 0) > 0 do
@@ -525,6 +556,57 @@ local function spawnEnemy(enemyKey: string, waveNum: number, enemiesFolder: Fold
 					kaidoAura.Position = root.Position
 				end
 				model:PivotTo(root.CFrame)
+
+				-- Articulated Limb Locomotion Stride & Synchronized Accessories
+				if head and head ~= root then
+					for p, relCF in pairs(headRelOffsets) do
+						if p.Parent then
+							p.CFrame = head.CFrame * relCF
+						end
+					end
+				end
+
+				local walkAngle = math.sin(stepTick * 0.6)
+				local legSwing = walkAngle * 0.42
+				local armSwing = -walkAngle * 0.35
+
+				if stats.CanonicalClass == "SoruAssassin" then
+					armSwing = math.rad(-45) + math.sin(stepTick * 0.8) * 0.15
+					legSwing = math.sin(stepTick * 0.9) * 0.52
+				elseif stats.CanonicalClass == "HakiBrute" then
+					legSwing = walkAngle * 0.32
+					armSwing = math.sin(stepTick * 0.5) * 0.40
+				elseif stats.CanonicalClass == "YonkoBoss" then
+					legSwing = walkAngle * 0.28
+					armSwing = math.sin(stepTick * 0.4) * 0.25
+				end
+
+				local curHipL = root.CFrame * CFrame.new(-0.53 * stats.Scale, -0.60 * stats.Scale, 0) * CFrame.Angles(legSwing, 0, 0)
+				local curHipR = root.CFrame * CFrame.new(0.53 * stats.Scale, -0.60 * stats.Scale, 0) * CFrame.Angles(-legSwing, 0, 0)
+				local curShL = root.CFrame * CFrame.new(-1.39 * stats.Scale, 0.75 * stats.Scale, 0) * CFrame.Angles(armSwing, 0, 0)
+				local curShR = root.CFrame * CFrame.new(1.39 * stats.Scale, 0.75 * stats.Scale, 0) * CFrame.Angles(-armSwing, 0, 0)
+
+				for p, relCF in pairs(leftLegOffsets) do
+					if p.Parent then
+						p.CFrame = curHipL * relCF
+					end
+				end
+				for p, relCF in pairs(rightLegOffsets) do
+					if p.Parent then
+						p.CFrame = curHipR * relCF
+					end
+				end
+				for p, relCF in pairs(leftArmOffsets) do
+					if p.Parent then
+						p.CFrame = curShL * relCF
+					end
+				end
+				for p, relCF in pairs(rightArmOffsets) do
+					if p.Parent then
+						p.CFrame = curShR * relCF
+					end
+				end
+
 				task.wait(0.05)
 			end
 		end

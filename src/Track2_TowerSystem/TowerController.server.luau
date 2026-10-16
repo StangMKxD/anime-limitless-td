@@ -69,6 +69,17 @@ local slotOccupants: { [string]: Model? } = {}
 local slotPadParts: { [string]: Part } = {}
 local lastAttackTime: { [Model]: number } = {}
 
+type LimbRig = {
+	Head: Motor6D?,
+	RightArm: Motor6D?,
+	RightWeapon: Motor6D?,
+	LeftArm: Motor6D?,
+	LeftLeg: Motor6D?,
+	RightLeg: Motor6D?,
+	Aura: Motor6D?,
+}
+local towerRigs: { [Model]: LimbRig } = {}
+
 -- =============================================================================
 -- RIGGING & PHYSICS CONSTRAINT HELPERS (F-01 WELDCONSTRAINTS)
 -- =============================================================================
@@ -668,21 +679,185 @@ local function tryLoadFromHeroModels(
 		model:PivotTo(CFrame.new(slotPos + Vector3.new(0, 2.5, 0)))
 	end
 
-	-- Unanchor and weld all constituent parts to HRP via WeldConstraint ("AssetKitRootWeld")
+	-- 8-Joint Skeletal Limb Articulation Engine (Anchors & Motor6Ds)
+	local rightArmAnchor = Instance.new("Part")
+	rightArmAnchor.Name = "RightArm"
+	rightArmAnchor.Size = Vector3.new(0.9, 2.2, 0.9)
+	rightArmAnchor.Transparency = 1
+	rightArmAnchor.CanCollide = false
+	rightArmAnchor.CanTouch = false
+	rightArmAnchor.CanQuery = false
+	rightArmAnchor.Massless = true
+	rightArmAnchor.CFrame = root.CFrame * CFrame.new(1.39, 0.75, 0)
+	rightArmAnchor.Parent = model
+
+	local rightShoulder = Instance.new("Motor6D")
+	rightShoulder.Name = "RightShoulder"
+	rightShoulder.Part0 = root
+	rightShoulder.Part1 = rightArmAnchor
+	rightShoulder.C0 = CFrame.new(1.39, 0.75, 0)
+	rightShoulder.C1 = CFrame.new(0, 0, 0)
+	rightShoulder.Parent = root
+
+	local leftArmAnchor = Instance.new("Part")
+	leftArmAnchor.Name = "LeftArm"
+	leftArmAnchor.Size = Vector3.new(0.9, 2.2, 0.9)
+	leftArmAnchor.Transparency = 1
+	leftArmAnchor.CanCollide = false
+	leftArmAnchor.CanTouch = false
+	leftArmAnchor.CanQuery = false
+	leftArmAnchor.Massless = true
+	leftArmAnchor.CFrame = root.CFrame * CFrame.new(-1.39, 0.75, 0)
+	leftArmAnchor.Parent = model
+
+	local leftShoulder = Instance.new("Motor6D")
+	leftShoulder.Name = "LeftShoulder"
+	leftShoulder.Part0 = root
+	leftShoulder.Part1 = leftArmAnchor
+	leftShoulder.C0 = CFrame.new(-1.39, 0.75, 0)
+	leftShoulder.C1 = CFrame.new(0, 0, 0)
+	leftShoulder.Parent = root
+
+	local signatureWeapon = Instance.new("Part")
+	signatureWeapon.Name = "SignatureWeapon"
+	signatureWeapon.Size = Vector3.new(0.5, 3.0, 0.5)
+	signatureWeapon.Transparency = 1
+	signatureWeapon.CanCollide = false
+	signatureWeapon.CanTouch = false
+	signatureWeapon.CanQuery = false
+	signatureWeapon.Massless = true
+	signatureWeapon.CFrame = root.CFrame * CFrame.new(1.63, -0.91, -0.50)
+	signatureWeapon.Parent = model
+
+	local rightWrist = Instance.new("Motor6D")
+	rightWrist.Name = "RightWrist"
+	rightWrist.Part0 = rightArmAnchor
+	rightWrist.Part1 = signatureWeapon
+	rightWrist.C0 = CFrame.new(0.24, -1.66, -0.50) * CFrame.Angles(math.rad(-65), 0, 0)
+	rightWrist.C1 = CFrame.new(0, 0, 0)
+	rightWrist.Parent = rightArmAnchor
+
+	local leftLegAnchor = Instance.new("Part")
+	leftLegAnchor.Name = "LeftLegAnchor"
+	leftLegAnchor.Size = Vector3.new(0.9, 2.0, 0.9)
+	leftLegAnchor.Transparency = 1
+	leftLegAnchor.CanCollide = false
+	leftLegAnchor.CanTouch = false
+	leftLegAnchor.CanQuery = false
+	leftLegAnchor.Massless = true
+	leftLegAnchor.CFrame = root.CFrame * CFrame.new(-0.53, -0.60, 0)
+	leftLegAnchor.Parent = model
+
+	local leftHip = Instance.new("Motor6D")
+	leftHip.Name = "LeftHip"
+	leftHip.Part0 = root
+	leftHip.Part1 = leftLegAnchor
+	leftHip.C0 = CFrame.new(-0.53, -0.60, 0)
+	leftHip.C1 = CFrame.new(0, 0, 0)
+	leftHip.Parent = root
+
+	local rightLegAnchor = Instance.new("Part")
+	rightLegAnchor.Name = "RightLegAnchor"
+	rightLegAnchor.Size = Vector3.new(0.9, 2.0, 0.9)
+	rightLegAnchor.Transparency = 1
+	rightLegAnchor.CanCollide = false
+	rightLegAnchor.CanTouch = false
+	rightLegAnchor.CanQuery = false
+	rightLegAnchor.Massless = true
+	rightLegAnchor.CFrame = root.CFrame * CFrame.new(0.53, -0.60, 0)
+	rightLegAnchor.Parent = model
+
+	local rightHip = Instance.new("Motor6D")
+	rightHip.Name = "RightHip"
+	rightHip.Part0 = root
+	rightHip.Part1 = rightLegAnchor
+	rightHip.C0 = CFrame.new(0.53, -0.60, 0)
+	rightHip.C1 = CFrame.new(0, 0, 0)
+	rightHip.Parent = root
+
+	local headPart = model:FindFirstChild("Head") :: BasePart?
+	local neckJoint: Motor6D? = nil
+	if headPart then
+		neckJoint = Instance.new("Motor6D")
+		neckJoint.Name = "NeckJoint"
+		neckJoint.Part0 = root
+		neckJoint.Part1 = headPart
+		neckJoint.C0 = CFrame.new(0, 1.89, 0)
+		neckJoint.C1 = CFrame.new(0, 0, 0)
+		neckJoint.Parent = root
+	end
+
+	local auraAnchor = Instance.new("Part")
+	auraAnchor.Name = "AuraAnchor"
+	auraAnchor.Size = Vector3.new(1, 0.1, 1)
+	auraAnchor.Transparency = 1
+	auraAnchor.CanCollide = false
+	auraAnchor.CanTouch = false
+	auraAnchor.CanQuery = false
+	auraAnchor.Massless = true
+	auraAnchor.CFrame = root.CFrame * CFrame.new(0, -2.35, 0)
+	auraAnchor.Parent = model
+
+	local auraMotor = Instance.new("Motor6D")
+	auraMotor.Name = "AuraMotor"
+	auraMotor.Part0 = root
+	auraMotor.Part1 = auraAnchor
+	auraMotor.C0 = CFrame.new(0, -2.35, 0)
+	auraMotor.C1 = CFrame.new(0, 0, 0)
+	auraMotor.Parent = root
+
+	-- Unanchor and weld all constituent parts via WeldConstraint ("AssetKitRootWeld")
 	for _, part in ipairs(model:GetDescendants()) do
-		if part:IsA("BasePart") and part ~= root then
+		if part:IsA("BasePart") and part ~= root and part ~= rightArmAnchor and part ~= leftArmAnchor and part ~= signatureWeapon and part ~= leftLegAnchor and part ~= rightLegAnchor and part ~= auraAnchor and part ~= headPart then
 			part.Anchored = false
 			part.CanCollide = false
 			part.CanTouch = false
 			part.CanQuery = false
 			part.Massless = true
+
+			local pName = part.Name
+			local parentPart: BasePart = root
+
+			if headPart and (pName == "Neck" or string.find(pName, "Nose") or string.find(pName, "Ear") or string.find(pName, "Eye") or string.find(pName, "Pupil") or string.find(pName, "Teeth") or string.find(pName, "Mouth") or string.find(pName, "Smile") or string.find(pName, "Smirk") or string.find(pName, "Jaw") or string.find(pName, "Chin") or string.find(pName, "Fang") or string.find(pName, "Bevel") or string.find(pName, "Hair") or string.find(pName, "Spike") or string.find(pName, "Bang") or string.find(pName, "Curtain") or string.find(pName, "Sweep") or string.find(pName, "Lock") or string.find(pName, "Afro") or string.find(pName, "Hat") or string.find(pName, "Straw") or string.find(pName, "Scar") or string.find(pName, "Glass") or string.find(pName, "Muzzle") or string.find(pName, "Antler") or string.find(pName, "Mustache") or string.find(pName, "Bandana") or string.find(pName, "Mask") or string.find(pName, "Horn") or pName == "MouthSword") then
+				parentPart = headPart
+			elseif string.find(pName, "SwordRight") or string.find(pName, "Gryphon") or string.find(pName, "Naginata") or string.find(pName, "Kikoku") or string.find(pName, "LightSword") or string.find(pName, "Slingshot") or string.find(pName, "FlameOrb") or pName == "Bone" or pName == "ClawBlade_2" or string.find(pName, "Kanabo") or string.find(pName, "Hilt") or string.find(pName, "Tsuba") or string.find(pName, "Pommel") or string.find(pName, "Blade") or string.find(pName, "Staff") or string.find(pName, "Sheath") or string.find(pName, "HakiFlame") then
+				parentPart = signatureWeapon
+			elseif string.find(pName, "SwordLeft") or string.find(pName, "ClimaTact") or pName == "TactTop" or (string.find(pName, "ClawBlade") and not string.find(pName, "_2")) then
+				parentPart = leftArmAnchor
+			elseif string.find(pName, "_2") and (string.find(pName, "Shoulder") or string.find(pName, "Arm") or string.find(pName, "Forearm") or string.find(pName, "Fist") or string.find(pName, "Knuckle") or string.find(pName, "Sleeve") or string.find(pName, "Hand")) or string.find(pName, "BlackHakiFist") then
+				parentPart = rightArmAnchor
+			elseif (string.find(pName, "Shoulder") or string.find(pName, "Arm") or string.find(pName, "Forearm") or string.find(pName, "Fist") or string.find(pName, "Knuckle") or string.find(pName, "Sleeve") or string.find(pName, "Hand")) and not string.find(pName, "_2") then
+				parentPart = leftArmAnchor
+			elseif string.find(pName, "_2") and (string.find(pName, "Thigh") or string.find(pName, "Shin") or string.find(pName, "Leg") or string.find(pName, "Boot") or string.find(pName, "Toe") or string.find(pName, "IfritFlame")) or (string.find(pName, "ShortsCuff") and part.Position.X >= root.Position.X) then
+				parentPart = rightLegAnchor
+			elseif (string.find(pName, "Thigh") or string.find(pName, "Shin") or string.find(pName, "Leg") or string.find(pName, "Boot") or string.find(pName, "Toe")) and not string.find(pName, "_2") or (string.find(pName, "ShortsCuff") and part.Position.X < root.Position.X) then
+				parentPart = leftLegAnchor
+			elseif string.find(pName, "Aura") or string.find(pName, "HakiGround") or string.find(pName, "Lightning") or string.find(pName, "Shard") or string.find(pName, "EnergyOrb") or string.find(pName, "ZeusCloud") or string.find(pName, "CloudPuff") or string.find(pName, "CloudEye") then
+				parentPart = auraAnchor
+			else
+				parentPart = root
+			end
+
 			local weld = Instance.new("WeldConstraint")
 			weld.Name = "AssetKitRootWeld"
 			weld.Part0 = root
 			weld.Part1 = part
 			weld.Parent = part
+			if parentPart ~= root then
+				weld.Part0 = parentPart
+			end
 		end
 	end
+
+	towerRigs[model] = {
+		Head = neckJoint,
+		RightArm = rightShoulder,
+		RightWeapon = rightWrist,
+		LeftArm = leftShoulder,
+		LeftLeg = leftHip,
+		RightLeg = rightHip,
+		Aura = auraMotor,
+	}
 
 	model:SetAttribute("HeroId", heroSpec.Id)
 	model:SetAttribute("UnitUid", unitUid)
@@ -691,6 +866,7 @@ local function tryLoadFromHeroModels(
 	model:SetAttribute("BaseY", slotPos.Y + 2.5)
 	model:SetAttribute("IsAttacking", false)
 	model:SetAttribute("AssetKitSkinned", true)
+	model:SetAttribute("IsArticulatedRig", true)
 
 	attachHakiAuraEmitter(root, heroSpec.PrimaryColor, heroSpec.SecondaryColor)
 
@@ -741,6 +917,7 @@ local function tryLoadFromHeroModels(
 
 	model.Destroying:Connect(function()
 		lastAttackTime[model] = nil
+		towerRigs[model] = nil
 	end)
 
 	model.PrimaryPart = root
@@ -1701,6 +1878,37 @@ local function execute5PhaseAttack(
 	-- Phase 1: Wind-Up Anticipation (0.14s)
 	local windUpCF = lookCF * CFrame.Angles(math.rad(-14), 0, 0)
 	TweenService:Create(root, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = windUpCF }):Play()
+	local rig = towerRigs[tower]
+	if rig then
+		if rig.RightArm then
+			TweenService:Create(rig.RightArm, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				C0 = CFrame.new(1.39, 0.75, 0) * CFrame.Angles(math.rad(55), math.rad(-15), math.rad(20)),
+			}):Play()
+		end
+		if rig.RightWeapon then
+			TweenService:Create(rig.RightWeapon, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				C0 = CFrame.new(0.24, -1.66, -0.50) * CFrame.Angles(math.rad(-85), 0, 0),
+			}):Play()
+		end
+		if rig.LeftArm then
+			TweenService:Create(rig.LeftArm, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				C0 = CFrame.new(-1.39, 0.75, 0) * CFrame.Angles(math.rad(-30), 0, math.rad(-20)),
+			}):Play()
+		end
+		if rig.Head then
+			TweenService:Create(rig.Head, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				C0 = CFrame.new(0, 1.89, 0) * CFrame.Angles(math.rad(-10), 0, 0),
+			}):Play()
+		end
+		if rig.LeftLeg and rig.RightLeg then
+			TweenService:Create(rig.LeftLeg, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				C0 = CFrame.new(-0.53, -0.60, 0) * CFrame.Angles(math.rad(18), 0, 0),
+			}):Play()
+			TweenService:Create(rig.RightLeg, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				C0 = CFrame.new(0.53, -0.60, 0) * CFrame.Angles(math.rad(-12), 0, 0),
+			}):Play()
+		end
+	end
 	if hasLimbs and rightArm and weapon then
 		TweenService:Create(rightArm, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 			Position = startPos + Vector3.new(0.4, 2.2, 0.6),
@@ -1719,6 +1927,37 @@ local function execute5PhaseAttack(
 		local dashPos = startPos + fwdDir * 3.2
 		local dashCF = CFrame.lookAt(dashPos, dashPos + fwdDir) * CFrame.Angles(math.rad(18), 0, 0)
 		TweenService:Create(root, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), { CFrame = dashCF }):Play()
+		if rig then
+			if rig.RightArm then
+				TweenService:Create(rig.RightArm, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+					C0 = CFrame.new(1.39, 0.75, 0) * CFrame.Angles(math.rad(-75), math.rad(20), math.rad(-10)),
+				}):Play()
+			end
+			if rig.RightWeapon then
+				TweenService:Create(rig.RightWeapon, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+					C0 = CFrame.new(0.24, -1.66, -0.50) * CFrame.Angles(math.rad(-30), 0, 0),
+				}):Play()
+			end
+			if rig.LeftArm then
+				TweenService:Create(rig.LeftArm, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+					C0 = CFrame.new(-1.39, 0.75, 0) * CFrame.Angles(math.rad(45), 0, math.rad(-25)),
+				}):Play()
+			end
+			if rig.LeftLeg and rig.RightLeg then
+				if heroSpec.AttackStyle == "BoeufBurst" then
+					TweenService:Create(rig.RightLeg, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+						C0 = CFrame.new(0.53, -0.60, 0) * CFrame.Angles(math.rad(-95), 0, math.rad(30)),
+					}):Play()
+				else
+					TweenService:Create(rig.LeftLeg, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+						C0 = CFrame.new(-0.53, -0.60, 0) * CFrame.Angles(math.rad(-35), 0, 0),
+					}):Play()
+					TweenService:Create(rig.RightLeg, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
+						C0 = CFrame.new(0.53, -0.60, 0) * CFrame.Angles(math.rad(40), 0, 0),
+					}):Play()
+				end
+			end
+		end
 		if hasLimbs and rightArm and weapon then
 			TweenService:Create(rightArm, TweenInfo.new(0.10, Enum.EasingStyle.Exponential, Enum.EasingDirection.In), {
 				Position = dashPos + fwdDir * 1.8 + Vector3.new(0, 0.4, 0),
@@ -1748,6 +1987,18 @@ local function execute5PhaseAttack(
 				end
 
 				-- Phase 4: Impact Strike & Follow-Through (0.20s)
+				if rig then
+					if rig.RightArm then
+						TweenService:Create(rig.RightArm, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+							C0 = CFrame.new(1.39, 0.75, 0) * CFrame.Angles(math.rad(-90), math.rad(40), 0),
+						}):Play()
+					end
+					if rig.RightWeapon then
+						TweenService:Create(rig.RightWeapon, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+							C0 = CFrame.new(0.24, -1.66, -0.50) * CFrame.Angles(math.rad(-15), 0, 0),
+						}):Play()
+					end
+				end
 				onImpactCallback()
 
 				task.delay(0.20, function()
@@ -1759,6 +2010,36 @@ local function execute5PhaseAttack(
 					local basePos = Vector3.new(startPos.X, baseY, startPos.Z)
 					local returnCF = CFrame.lookAt(basePos, basePos + fwdDir)
 					TweenService:Create(root, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { CFrame = returnCF }):Play()
+					if rig then
+						if rig.RightArm then
+							TweenService:Create(rig.RightArm, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+								C0 = CFrame.new(1.39, 0.75, 0) * CFrame.Angles(0, 0, math.rad(5)),
+							}):Play()
+						end
+						if rig.RightWeapon then
+							TweenService:Create(rig.RightWeapon, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+								C0 = CFrame.new(0.24, -1.66, -0.50) * CFrame.Angles(math.rad(-65), 0, 0),
+							}):Play()
+						end
+						if rig.LeftArm then
+							TweenService:Create(rig.LeftArm, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+								C0 = CFrame.new(-1.39, 0.75, 0) * CFrame.Angles(0, 0, math.rad(-5)),
+							}):Play()
+						end
+						if rig.Head then
+							TweenService:Create(rig.Head, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+								C0 = CFrame.new(0, 1.89, 0),
+							}):Play()
+						end
+						if rig.LeftLeg and rig.RightLeg then
+							TweenService:Create(rig.LeftLeg, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+								C0 = CFrame.new(-0.53, -0.60, 0) * CFrame.Angles(math.rad(4), 0, math.rad(-2)),
+							}):Play()
+							TweenService:Create(rig.RightLeg, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+								C0 = CFrame.new(0.53, -0.60, 0) * CFrame.Angles(math.rad(-4), 0, math.rad(2)),
+							}):Play()
+						end
+					end
 					if hasLimbs and rightArm and weapon then
 						local returnArmPos = basePos + returnCF:VectorToWorldSpace(Vector3.new(1.55, 0, 0))
 						TweenService:Create(rightArm, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
@@ -2122,25 +2403,53 @@ RunService.Heartbeat:Connect(function()
 				local curPos = tower.PrimaryPart.Position
 				tower.PrimaryPart.Position = Vector3.new(curPos.X, baseY + bob, curPos.Z)
 
-				local head = tower:FindFirstChild("Head") :: BasePart?
-				if head then
-					head.Position = tower.PrimaryPart.Position + Vector3.new(0, 1.95, 0)
-				end
+				local isArticulated = (tower:GetAttribute("IsArticulatedRig") :: boolean?) or false
+				local rig = towerRigs[tower]
+				if rig and isArticulated then
+					local breath = math.sin(now * 2.8) * 0.05
+					local armBobR = math.sin(now * 3.2 + 0.4) * 0.08
+					local armBobL = math.sin(now * 3.2 - 0.4) * 0.08
 
-				local rightArm = tower:FindFirstChild("RightArm") :: BasePart?
-				local weapon = tower:FindFirstChild("SignatureWeapon") :: BasePart?
-				if rightArm then
-					local armBob = math.sin(now * 3.2 + 0.4) * 0.08
-					rightArm.Position = tower.PrimaryPart.Position + Vector3.new(1.55, armBob, 0)
-					if weapon then
-						weapon.Position = rightArm.Position + Vector3.new(0, 0.5, -1.8)
+					if rig.Head then
+						rig.Head.C0 = CFrame.new(0, 1.89, 0) * CFrame.Angles(math.rad(breath * 35), math.rad(math.sin(now * 1.5) * 4), 0)
 					end
-				end
+					if rig.RightArm then
+						rig.RightArm.C0 = CFrame.new(1.39, 0.75, 0) * CFrame.Angles(math.rad(armBobR * 50), 0, math.rad(5))
+					end
+					if rig.LeftArm then
+						rig.LeftArm.C0 = CFrame.new(-1.39, 0.75, 0) * CFrame.Angles(math.rad(armBobL * 50), 0, math.rad(-5))
+					end
+					if rig.RightWeapon then
+						rig.RightWeapon.C0 = CFrame.new(0.24, -1.66, -0.50) * CFrame.Angles(math.rad(-65 + armBobR * 20), 0, 0)
+					end
+					if rig.LeftLeg and rig.RightLeg then
+						rig.LeftLeg.C0 = CFrame.new(-0.53, -0.60, 0) * CFrame.Angles(math.rad(4), 0, math.rad(-2))
+						rig.RightLeg.C0 = CFrame.new(0.53, -0.60, 0) * CFrame.Angles(math.rad(-4), 0, math.rad(2))
+					end
+					if rig.Aura then
+						rig.Aura.C0 = CFrame.new(0, -2.35, 0) * CFrame.Angles(0, now * 1.5, 0)
+					end
+				else
+					local head = tower:FindFirstChild("Head") :: BasePart?
+					if head then
+						head.Position = tower.PrimaryPart.Position + Vector3.new(0, 1.95, 0)
+					end
 
-				local leftArm = tower:FindFirstChild("LeftArm") :: BasePart?
-				if leftArm then
-					local armBobLeft = math.sin(now * 3.2 - 0.4) * 0.08
-					leftArm.Position = tower.PrimaryPart.Position + Vector3.new(-1.55, armBobLeft, 0)
+					local rightArm = tower:FindFirstChild("RightArm") :: BasePart?
+					local weapon = tower:FindFirstChild("SignatureWeapon") :: BasePart?
+					if rightArm then
+						local armBob = math.sin(now * 3.2 + 0.4) * 0.08
+						rightArm.Position = tower.PrimaryPart.Position + Vector3.new(1.55, armBob, 0)
+						if weapon then
+							weapon.Position = rightArm.Position + Vector3.new(0, 0.5, -1.8)
+						end
+					end
+
+					local leftArm = tower:FindFirstChild("LeftArm") :: BasePart?
+					if leftArm then
+						local armBobLeft = math.sin(now * 3.2 - 0.4) * 0.08
+						leftArm.Position = tower.PrimaryPart.Position + Vector3.new(-1.55, armBobLeft, 0)
+					end
 				end
 			end
 
