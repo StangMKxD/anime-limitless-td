@@ -1,0 +1,33 @@
+{
+  "generator": "build_assets.py (V2 High-Detail One Piece Masterpiece)",
+  "models": {
+    "HeroModels": {
+      "Luffy": 122,
+      "Zoro": 139,
+      "Nami": 94,
+      "Usopp": 102,
+      "Sanji": 102,
+      "Chopper": 76,
+      "Robin": 101,
+      "Shanks": 94,
+      "Whitebeard": 104,
+      "Ace": 128,
+      "Law": 98,
+      "Kizaru": 103
+    },
+    "EnemyModels": {
+      "PirateGrunt": 70,
+      "SoruAssassin": 62,
+      "HakiBrute": 76,
+      "YonkoBoss": 129
+    },
+    "MapModels": {
+      "AnimeBaseCrystal": 40,
+      "EnemySpawnGate": 23,
+      "PlacementPadTemplate": 13
+    }
+  },
+  "total": 19,
+  "total_parts": 1676,
+  "note": "12 high-detail One Piece heroes, 4 elite/Yonko enemies, 3 Grand Line map structures"
+}
