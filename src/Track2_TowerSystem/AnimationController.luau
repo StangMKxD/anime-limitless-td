@@ -137,6 +137,24 @@ local function getOrCreateMotor6D(
 	return motor
 end
 
+local function getOrCreateAttachment(
+	model: Model,
+	parent: BasePart,
+	name: string,
+	offset: CFrame
+): Attachment
+	local existing = model:FindFirstChild(name, true)
+	if existing and existing:IsA("Attachment") then
+		return existing
+	end
+
+	local att = Instance.new("Attachment")
+	att.Name = name
+	att.CFrame = offset
+	att.Parent = parent
+	return att
+end
+
 -- =============================================================================
 -- 2. RIG SANITIZATION & ASSEMBLY (P5-08)
 -- =============================================================================
@@ -242,6 +260,16 @@ function AnimationController.SanitizeAndRigModel(
 		motors.WeaponMouth = getOrCreateMotor6D(head, "WeaponMouth", head, weaponM, CFrame.new(0, -0.25, -0.55), CFrame.identity)
 	end
 
+	-- 3.5 Dynamic Semantic Attachment Injection (Task L-01)
+	getOrCreateAttachment(model, root, "RootAttachment", CFrame.new(0, -1.0, 0))
+	local rightFist = model:FindFirstChild("Fist_2") :: BasePart? or rightArm
+	getOrCreateAttachment(model, rightFist, "RightArmAttachment", CFrame.new(0, -0.28, 0))
+	local leftFist = model:FindFirstChild("Fist") :: BasePart? or leftArm
+	getOrCreateAttachment(model, leftFist, "LeftArmAttachment", CFrame.new(0, -0.28, 0))
+	getOrCreateAttachment(model, head, "HeadAttachment", CFrame.new(0, 0.77, 0))
+	getOrCreateAttachment(model, torso, "HakiCloudAttachment", CFrame.new(0, 2.40, 0.62))
+	getOrCreateAttachment(model, torso, "BajrangAnchorAttachment", CFrame.new(0, 5.50, -1.20))
+
 	-- 4. Dynamic Accessory & Sub-part Clustering (Anti-Lock Rigid Weld Protocol)
 	local limbCounts: { [string]: number } = {
 		Torso = 0,
@@ -268,21 +296,51 @@ function AnimationController.SanitizeAndRigModel(
 	for _, part in ipairs(model:GetDescendants()) do
 		if part:IsA("BasePart") and not semanticParts[part] then
 			local pName = part.Name
+			local relX = part.Position.X - root.Position.X
 			local targetLimb: BasePart = torso
 
-			if string.find(pName, "Hair") or string.find(pName, "Hat") or string.find(pName, "Eye")
+			-- 1. Explicit Torso exclusions: Chest scar, slung-back straw hat & weave parts
+			if string.find(pName, "ChestScar") then
+				targetLimb = torso
+				limbCounts.Torso += 1
+			elseif string.find(pName, "StrawWeave") or string.find(pName, "StrawHat") then
+				targetLimb = torso
+				limbCounts.Torso += 1
+
+			-- 2. Explicit Arm overrides: Haki glow, knuckles, shoulder caps (Spatial X routing)
+			elseif string.find(pName, "HakiCrimsonGlow") or string.find(pName, "BlackHakiFist") or string.find(pName, "HakiBusoFist") then
+				targetLimb = rightArm
+				limbCounts.RightArm += 1
+			elseif string.find(pName, "Knuckle") or string.find(pName, "ShoulderCap") then
+				if relX > 0.8 then
+					targetLimb = rightArm
+					limbCounts.RightArm += 1
+				else
+					targetLimb = leftArm
+					limbCounts.LeftArm += 1
+				end
+
+			-- 3. Head & Face features
+			elseif string.find(pName, "HeadTopBevel") or string.find(pName, "Smile")
+				or string.find(pName, "Hair") or string.find(pName, "Hat") or string.find(pName, "Eye")
 				or string.find(pName, "Ear") or string.find(pName, "Nose") or string.find(pName, "Mouth")
-				or string.find(pName, "Jaw") or string.find(pName, "Teeth") or string.find(pName, "Scar")
-				or string.find(pName, "Bandana") or string.find(pName, "Antler") or string.find(pName, "Cap") then
+				or string.find(pName, "Jaw") or string.find(pName, "Teeth")
+				or (string.find(pName, "Scar") and not string.find(pName, "Chest"))
+				or string.find(pName, "Bandana") or string.find(pName, "Antler")
+				or (string.find(pName, "Cap") and not string.find(pName, "Shoulder")) then
 				targetLimb = head
 				limbCounts.Head += 1
+
+			-- 4. Standard Arm Limbs
 			elseif (string.find(pName, "_2") and (string.find(pName, "Arm") or string.find(pName, "Forearm") or string.find(pName, "Fist") or string.find(pName, "Shoulder") or string.find(pName, "Sleeve")))
-				or string.find(pName, "BlackHakiFist") or string.find(pName, "HakiBusoFist") then
+				or ((string.find(pName, "Arm") or string.find(pName, "Forearm") or string.find(pName, "Fist") or string.find(pName, "Shoulder") or string.find(pName, "Sleeve")) and relX > 0.8) then
 				targetLimb = rightArm
 				limbCounts.RightArm += 1
 			elseif (string.find(pName, "Arm") or string.find(pName, "Forearm") or string.find(pName, "Fist") or string.find(pName, "Shoulder") or string.find(pName, "Sleeve")) and not string.find(pName, "_2") then
 				targetLimb = leftArm
 				limbCounts.LeftArm += 1
+
+			-- 5. Leg Limbs
 			elseif (string.find(pName, "_2") and (string.find(pName, "Thigh") or string.find(pName, "Shin") or string.find(pName, "Boot") or string.find(pName, "Leg") or string.find(pName, "Toe")))
 				or (string.find(pName, "ShortsCuff") and part.Position.X >= root.Position.X) then
 				targetLimb = rightLeg
@@ -291,9 +349,13 @@ function AnimationController.SanitizeAndRigModel(
 				or (string.find(pName, "ShortsCuff") and part.Position.X < root.Position.X) then
 				targetLimb = leftLeg
 				limbCounts.LeftLeg += 1
+
+			-- 6. Weapon Limbs
 			elseif string.find(pName, "Wado") or string.find(pName, "Enma") or string.find(pName, "Sandai") or string.find(pName, "Sword") or string.find(pName, "Blade") or string.find(pName, "Hilt") or string.find(pName, "Scabbard") then
 				targetLimb = rightArm
 				limbCounts.Weapons += 1
+
+			-- 7. Torso default
 			else
 				targetLimb = torso
 				limbCounts.Torso += 1

@@ -101,3 +101,23 @@ Static file/XML/Git: inspected ตามรายการข้างต้น;
   - `lune run tests/phase5_core_and_lab.spec`: 21 / 21 PASSED (100.0%)
   - `rojo sourcemap default.project.json`: Exit code 0 (JSON valid)
   - Internal Gate Status: PASS (worker_m1_3, reviewer_m1_iter3_1, reviewer_m1_iter3_2, challenger_m1_iter3_1, challenger_m1_iter3_2, auditor_m1_iter3_1 all APPROVED/CLEAN)
+
+
+## Milestone M2 Completion Notes (`L-01`..`L-04`)
+
+- **Status**: [READY_FOR_REVIEW] (Internal Gate: PASS)
+- **Active Branch**: `phase5/implementer-took-dev`
+- **Execution Base SHA**: `44026faf294e378207f231e2ced5832847e352be`
+- **Deliverables Completed & Locked**:
+  - `L-01`: Verified Luffy model integrity preserving all 122 `BasePart` instances in `assets/rojo/HeroModels/Luffy.rbxmx` with 6 semantic joints (`RootJoint`, `Neck`, `RightShoulder`, `LeftShoulder`, `RightHip`, `LeftHip`), zero rigid weld conflicts on animated limbs, and rigid welds for Gear 5 accessories (`CloudScarf`, `StrawHat`, `Sash`, `Hair`) anchored to parent limbs with dynamic visual attachments.
+  - `L-02`: Created Luffy Gear 5 Signature Animation Profile in `src/Track2_TowerSystem/Animations/Luffy.luau` implementing all 8 standard states (`Idle` Joyboy Bounce, `SpecialIdle` Nika Belly Laugh, `Spawn` Sky Bounce Drop, `Windup` Rubber Arm Coil Back, `Attack` Stretch Punch with shoulder pivot compensation, `Impact` Hit-stop Vibration, `Recovery` Elastic Snap-back, and `Ultimate` Bajrang Fist) with deterministic kinematics and arm rest-pose restoration error `< 0.001`.
+  - `L-03`: Created Luffy Gear 5 Signature VFX Module in `src/Track2_TowerSystem/VFX/LuffyVFX.luau` featuring cloud aura particles, black-red Conqueror Haki lightning arcs, rubber sonic rings, Bajrang Fist visual mesh/shockwave dome, quality preset scaling (`Low`, `Medium`, `High`), layer toggles, and strict resource ledger tracking with 100% cleanup upon reset or model destruction.
+  - `L-04`: Created comprehensive automated verification suite `tests/characters/luffy_anim_vfx.spec.luau` verifying all 8 animation states, multi-part limb world CFrame movement, limb scale snap-back restoration (`delta < 0.001`), VFX ledger registration, quality scaling, mid-animation cancel safety, and zero memory leaks.
+- **Verification Evidence**:
+  - `node tests/run_all_tests.mjs`: 44 / 44 PASSED (100.0%)
+  - `node tests/combat_oracle_verification.test.mjs`: 22 / 22 PASSED (100.0%)
+  - `node tests/phase5_core_and_lab.test.mjs`: 82 / 82 PASSED (100.0%)
+  - `lune run tests/phase5_core_and_lab.spec`: 21 / 21 PASSED (100.0%)
+  - `lune run tests/characters/luffy_anim_vfx.spec`: 29 / 29 PASSED (100.0%)
+  - `rojo sourcemap default.project.json`: Exit code 0 (JSON valid)
+  - Internal Gate Status: PASS (worker_m2_1, reviewer_m2_1, reviewer_m2_2, challenger_m2_1, challenger_m2_2, auditor_m2_1 all APPROVED/CLEAN)
