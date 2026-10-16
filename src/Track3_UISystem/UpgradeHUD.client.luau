@@ -97,6 +97,31 @@ local function findHeroSpec(heroId: string): HeroSpec?
 end
 
 -- =============================================================================
+-- MINIMALIST FLAT UI THEME CONSTANTS & HERO ACRONYMS (PLAN-0009)
+-- =============================================================================
+
+local UI_THEME = {
+	BgDark = Color3.fromRGB(14, 16, 22),
+	BgCard = Color3.fromRGB(22, 25, 34),
+	AccentGold = Color3.fromRGB(245, 195, 55),
+	AccentCyan = Color3.fromRGB(60, 200, 255),
+	AccentRed = Color3.fromRGB(235, 65, 85),
+	TextLight = Color3.fromRGB(240, 244, 250),
+	TextMuted = Color3.fromRGB(160, 170, 185),
+}
+
+local HERO_ACRONYMS: { [string]: { Acronym: string, Accent: Color3, Name: string, Cost: number } } = {
+	["Tower_Luffy_G5"] = { Acronym = "LUF", Accent = Color3.fromRGB(255, 230, 110), Name = "LUFFY", Cost = 100 },
+	["Tower_Zoro_KingOfHell"] = { Acronym = "ZOR", Accent = Color3.fromRGB(50, 225, 120), Name = "ZORO", Cost = 100 },
+	["Tower_Sanji_Ifrit"] = { Acronym = "SAN", Accent = Color3.fromRGB(45, 140, 255), Name = "SANJI", Cost = 100 },
+	["Tower_Shanks_Kamusari"] = { Acronym = "SHA", Accent = Color3.fromRGB(235, 45, 65), Name = "SHANKS", Cost = 100 },
+	["Tower_Whitebeard_Gura"] = { Acronym = "WB", Accent = Color3.fromRGB(230, 245, 255), Name = "WHITEBEARD", Cost = 100 },
+	["Tower_Ace_Entei"] = { Acronym = "ACE", Accent = Color3.fromRGB(255, 130, 30), Name = "ACE", Cost = 100 },
+	["Tower_Law_KRoom"] = { Acronym = "LAW", Accent = Color3.fromRGB(80, 200, 255), Name = "LAW", Cost = 100 },
+	["Tower_Kizaru_Pika"] = { Acronym = "KIZ", Accent = Color3.fromRGB(255, 245, 90), Name = "KIZARU", Cost = 100 },
+}
+
+-- =============================================================================
 -- SAFE REMOTE RESOLUTION (DUAL CONTAINER RESILIENCE)
 -- =============================================================================
 
@@ -364,161 +389,198 @@ else
 	end)
 end
 
--- =============================================================================
--- SUBSYSTEM 2: TOP BANNER HUD (WAVE, BASE HP, RESOURCES & CREW STATS)
--- =============================================================================
-
-local topBanner = Instance.new("Frame")
-topBanner.Name = "TopBannerHUD"
-topBanner.Size = UDim2.new(0, 720, 0, 78)
-topBanner.Position = UDim2.new(0.5, -360, 0, 8)
-topBanner.BackgroundColor3 = Color3.fromRGB(14, 16, 26)
-topBanner.BorderSizePixel = 0
-topBanner.Parent = screenGui
-
-local topBannerCorner = Instance.new("UICorner")
-topBannerCorner.CornerRadius = UDim.new(0, 12)
-topBannerCorner.Parent = topBanner
-
-local topBannerStroke = Instance.new("UIStroke")
-topBannerStroke.Color = Color3.fromRGB(255, 205, 50)
-topBannerStroke.Thickness = 2
-topBannerStroke.Parent = topBanner
-
--- Row 1: Wave Status & Prep Countdown
-local waveStatusLbl = Instance.new("TextLabel")
-waveStatusLbl.Name = "WaveStatusLabel"
-waveStatusLbl.Size = UDim2.new(1, -20, 0, 24)
-waveStatusLbl.Position = UDim2.fromOffset(10, 4)
-waveStatusLbl.BackgroundTransparency = 1
-waveStatusLbl.TextColor3 = Color3.fromRGB(255, 220, 70)
-waveStatusLbl.Font = Enum.Font.GothamBlack
-waveStatusLbl.TextScaled = true
-waveStatusLbl.Text = "PREPARING GRAND LINE..."
-waveStatusLbl.Parent = topBanner
-
--- Row 2: Base HP Bar
-local hpBarBg = Instance.new("Frame")
-hpBarBg.Name = "BaseHpBarBg"
-hpBarBg.Size = UDim2.new(1, -24, 0, 20)
-hpBarBg.Position = UDim2.fromOffset(12, 30)
-hpBarBg.BackgroundColor3 = Color3.fromRGB(36, 18, 24)
-hpBarBg.BorderSizePixel = 0
-hpBarBg.Parent = topBanner
-
-local hpBarBgCorner = Instance.new("UICorner")
-hpBarBgCorner.CornerRadius = UDim.new(0, 6)
-hpBarBgCorner.Parent = hpBarBg
-
-local hpBarFill = Instance.new("Frame")
-hpBarFill.Name = "BaseHpBarFill"
-hpBarFill.Size = UDim2.new(1, 0, 1, 0)
-hpBarFill.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-hpBarFill.BorderSizePixel = 0
-hpBarFill.Parent = hpBarBg
-
-local hpBarFillCorner = Instance.new("UICorner")
-hpBarFillCorner.CornerRadius = UDim.new(0, 6)
-hpBarFillCorner.Parent = hpBarFill
-
-local hpBarText = Instance.new("TextLabel")
-hpBarText.Name = "BaseHpBarText"
-hpBarText.Size = UDim2.new(1, 0, 1, 0)
-hpBarText.BackgroundTransparency = 1
-hpBarText.TextColor3 = Color3.fromRGB(255, 255, 255)
-hpBarText.Font = Enum.Font.GothamBlack
-hpBarText.TextScaled = true
-hpBarText.Text = "BASE HP: 1000 / 1000 (100%)"
-hpBarText.Parent = hpBarBg
-
--- Row 3: Live Stats & Resource Counters
-local statsSummaryLbl = Instance.new("TextLabel")
-statsSummaryLbl.Name = "StatsSummaryLabel"
-statsSummaryLbl.Size = UDim2.new(1, -20, 0, 20)
-statsSummaryLbl.Position = UDim2.fromOffset(10, 53)
-statsSummaryLbl.BackgroundTransparency = 1
-statsSummaryLbl.TextColor3 = Color3.fromRGB(180, 235, 255)
-statsSummaryLbl.Font = Enum.Font.GothamBold
-statsSummaryLbl.TextScaled = true
-statsSummaryLbl.Text = "💰 $500 | 🎟️ 1 | 🪙 3 | 🗼 0/4 | DMG: 50 | RNG: 30 | CD: 1.15s | CRIT: 8% (2.00x)"
-statsSummaryLbl.Parent = topBanner
-
--- =============================================================================
--- SUBSYSTEM 3: LEFT SIDE INFINITE STAT UPGRADES PANEL
+---- =============================================================================
+-- SUBSYSTEM 2: TOP STATUS PILL & EARLY WAVE START BUTTON (PLAN-0009)
 -- =============================================================================
 
+local topPill = Instance.new("Frame")
+topPill.Name = "TopWaveBar"
+topPill.Size = UDim2.new(0, 360, 0, 30)
+topPill.Position = UDim2.new(0.5, -180, 0, 6)
+topPill.BackgroundColor3 = Color3.fromRGB(14, 16, 22)
+topPill.BackgroundTransparency = 0.25
+topPill.BorderSizePixel = 0
+topPill.Parent = screenGui
+
+local topPillCorner = Instance.new("UICorner")
+topPillCorner.CornerRadius = UDim.new(1, 0)
+topPillCorner.Parent = topPill
+
+local topPillStroke = Instance.new("UIStroke")
+topPillStroke.Color = Color3.fromRGB(60, 68, 85)
+topPillStroke.Thickness = 1
+topPillStroke.Parent = topPill
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Name = "StatusText"
+statusLabel.Size = UDim2.new(1, -80, 1, 0)
+statusLabel.Position = UDim2.new(0, 14, 0, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.TextSize = 13
+statusLabel.TextColor3 = Color3.fromRGB(240, 244, 250)
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.Text = "WAVE 1  •  HP 1000  •  $500"
+statusLabel.Parent = topPill
+
+local earlyStartBtn = Instance.new("TextButton")
+earlyStartBtn.Name = "EarlyStartBtn"
+earlyStartBtn.Size = UDim2.new(0, 64, 0, 22)
+earlyStartBtn.Position = UDim2.new(1, -68, 0.5, -11)
+earlyStartBtn.BackgroundColor3 = Color3.fromRGB(245, 195, 55)
+earlyStartBtn.Font = Enum.Font.GothamBlack
+earlyStartBtn.TextSize = 11
+earlyStartBtn.TextColor3 = Color3.fromRGB(15, 15, 20)
+earlyStartBtn.Text = "START"
+earlyStartBtn.Visible = false
+earlyStartBtn.Parent = topPill
+
+local earlyStartCorner = Instance.new("UICorner")
+earlyStartCorner.CornerRadius = UDim.new(1, 0)
+earlyStartCorner.Parent = earlyStartBtn
+
+earlyStartBtn.MouseButton1Click:Connect(function()
+	local rf = getUpgradeStatRemoteFunc()
+	local re = getUpgradeEventRemote()
+	if rf then
+		pcall(function()
+			rf:InvokeServer("EarlyStart")
+		end)
+	elseif re then
+		re:FireServer("EarlyStart")
+	end
+	earlyStartBtn.Visible = false
+end)
+
+-- =============================================================================
+-- SUBSYSTEM 3: COLLAPSIBLE MINI ACTION TOGGLES & STAT UPGRADE DRAWER (PLAN-0009)
+-- =============================================================================
+
+-- Mini Action Toggles Container (100x64 px at bottom-left)
+local miniActionToggles = Instance.new("Frame")
+miniActionToggles.Name = "MiniActionToggles"
+miniActionToggles.Size = UDim2.new(0, 100, 0, 64)
+miniActionToggles.Position = UDim2.new(0, 10, 1, -128)
+miniActionToggles.BackgroundTransparency = 1
+miniActionToggles.Parent = screenGui
+
+local toggleUpgradeBtn = Instance.new("TextButton")
+toggleUpgradeBtn.Name = "ToggleUpgradeBtn"
+toggleUpgradeBtn.Size = UDim2.new(1, 0, 0, 28)
+toggleUpgradeBtn.Position = UDim2.new(0, 0, 0, 0)
+toggleUpgradeBtn.BackgroundColor3 = UI_THEME.BgDark
+toggleUpgradeBtn.BackgroundTransparency = 0.2
+toggleUpgradeBtn.Font = Enum.Font.GothamBold
+toggleUpgradeBtn.TextSize = 11
+toggleUpgradeBtn.TextColor3 = UI_THEME.AccentCyan
+toggleUpgradeBtn.Text = "▲ STATS"
+toggleUpgradeBtn.Parent = miniActionToggles
+
+local uCorner = Instance.new("UICorner")
+uCorner.CornerRadius = UDim.new(0, 6)
+uCorner.Parent = toggleUpgradeBtn
+
+local uStroke = Instance.new("UIStroke")
+uStroke.Color = Color3.fromRGB(50, 70, 95)
+uStroke.Thickness = 1
+uStroke.Parent = toggleUpgradeBtn
+
+local toggleGachaBtn = Instance.new("TextButton")
+toggleGachaBtn.Name = "ToggleGachaBtn"
+toggleGachaBtn.Size = UDim2.new(1, 0, 0, 28)
+toggleGachaBtn.Position = UDim2.new(0, 0, 0, 34)
+toggleGachaBtn.BackgroundColor3 = UI_THEME.BgDark
+toggleGachaBtn.BackgroundTransparency = 0.2
+toggleGachaBtn.Font = Enum.Font.GothamBold
+toggleGachaBtn.TextSize = 11
+toggleGachaBtn.TextColor3 = UI_THEME.AccentGold
+toggleGachaBtn.Text = "★ SUMMON"
+toggleGachaBtn.Parent = miniActionToggles
+
+local gCorner = Instance.new("UICorner")
+gCorner.CornerRadius = UDim.new(0, 6)
+gCorner.Parent = toggleGachaBtn
+
+local gStroke = Instance.new("UIStroke")
+gStroke.Color = Color3.fromRGB(90, 80, 50)
+gStroke.Thickness = 1
+gStroke.Parent = toggleGachaBtn
+
+-- Collapsible Upgrade Shop Drawer (210x185 px at bottom-left, hidden by default)
 local upgradePanel = Instance.new("Frame")
-upgradePanel.Name = "InfiniteUpgradePanel"
-upgradePanel.Size = UDim2.fromOffset(250, 240)
-upgradePanel.Position = UDim2.new(0, 14, 0.5, -120)
-upgradePanel.BackgroundColor3 = Color3.fromRGB(16, 18, 28)
+upgradePanel.Name = "UpgradeShopFrame"
+upgradePanel.Size = UDim2.new(0, 210, 0, 185)
+upgradePanel.Position = UDim2.new(0, 10, 1, -320)
+upgradePanel.BackgroundColor3 = UI_THEME.BgDark
+upgradePanel.BackgroundTransparency = 0.15
 upgradePanel.BorderSizePixel = 0
+upgradePanel.Visible = false -- Hidden by default to preserve >85% clear screen space
 upgradePanel.Parent = screenGui
 
 local upgradePanelCorner = Instance.new("UICorner")
-upgradePanelCorner.CornerRadius = UDim.new(0, 12)
+upgradePanelCorner.CornerRadius = UDim.new(0, 8)
 upgradePanelCorner.Parent = upgradePanel
 
 local upgradePanelStroke = Instance.new("UIStroke")
-upgradePanelStroke.Color = Color3.fromRGB(0, 210, 255)
-upgradePanelStroke.Thickness = 2
+upgradePanelStroke.Color = UI_THEME.AccentCyan
+upgradePanelStroke.Thickness = 1.5
 upgradePanelStroke.Parent = upgradePanel
 
 local upgradeTitle = Instance.new("TextLabel")
 upgradeTitle.Name = "UpgradeTitle"
-upgradeTitle.Size = UDim2.new(1, -16, 0, 28)
-upgradeTitle.Position = UDim2.fromOffset(8, 8)
+upgradeTitle.Size = UDim2.new(1, -16, 0, 22)
+upgradeTitle.Position = UDim2.fromOffset(8, 6)
 upgradeTitle.BackgroundTransparency = 1
-upgradeTitle.TextColor3 = Color3.fromRGB(0, 225, 255)
+upgradeTitle.TextColor3 = UI_THEME.AccentCyan
 upgradeTitle.Font = Enum.Font.GothamBlack
-upgradeTitle.TextScaled = true
-upgradeTitle.Text = "ANIME STAT UPGRADES"
+upgradeTitle.TextSize = 11
+upgradeTitle.Text = "POWER UPGRADES"
 upgradeTitle.Parent = upgradePanel
 
 -- 3 Upgrade Buttons Container
 local btnDamage = Instance.new("TextButton")
 btnDamage.Name = "UpgradeDamageBtn"
-btnDamage.Size = UDim2.new(1, -20, 0, 56)
-btnDamage.Position = UDim2.fromOffset(10, 42)
-btnDamage.BackgroundColor3 = Color3.fromRGB(34, 48, 64)
-btnDamage.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnDamage.Size = UDim2.new(1, -16, 0, 44)
+btnDamage.Position = UDim2.fromOffset(8, 32)
+btnDamage.BackgroundColor3 = Color3.fromRGB(28, 68, 48)
+btnDamage.TextColor3 = UI_THEME.TextLight
 btnDamage.Font = Enum.Font.GothamBold
-btnDamage.TextScaled = true
+btnDamage.TextSize = 10
 btnDamage.Text = "⚔️ DAMAGE Lv.1\nCost: $75 | +10 DMG"
 btnDamage.Parent = upgradePanel
 
 local btnDmgCorner = Instance.new("UICorner")
-btnDmgCorner.CornerRadius = UDim.new(0, 8)
+btnDmgCorner.CornerRadius = UDim.new(0, 6)
 btnDmgCorner.Parent = btnDamage
 
 local btnRange = Instance.new("TextButton")
 btnRange.Name = "UpgradeRangeBtn"
-btnRange.Size = UDim2.new(1, -20, 0, 56)
-btnRange.Position = UDim2.fromOffset(10, 104)
-btnRange.BackgroundColor3 = Color3.fromRGB(34, 48, 64)
-btnRange.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnRange.Size = UDim2.new(1, -16, 0, 44)
+btnRange.Position = UDim2.fromOffset(8, 80)
+btnRange.BackgroundColor3 = Color3.fromRGB(28, 68, 48)
+btnRange.TextColor3 = UI_THEME.TextLight
 btnRange.Font = Enum.Font.GothamBold
-btnRange.TextScaled = true
+btnRange.TextSize = 10
 btnRange.Text = "🎯 RANGE Lv.1\nCost: $60 | +4 STUDS"
 btnRange.Parent = upgradePanel
 
 local btnRngCorner = Instance.new("UICorner")
-btnRngCorner.CornerRadius = UDim.new(0, 8)
+btnRngCorner.CornerRadius = UDim.new(0, 6)
 btnRngCorner.Parent = btnRange
 
 local btnSpeed = Instance.new("TextButton")
 btnSpeed.Name = "UpgradeSpeedBtn"
-btnSpeed.Size = UDim2.new(1, -20, 0, 56)
-btnSpeed.Position = UDim2.fromOffset(10, 166)
-btnSpeed.BackgroundColor3 = Color3.fromRGB(34, 48, 64)
-btnSpeed.TextColor3 = Color3.fromRGB(255, 255, 255)
+btnSpeed.Size = UDim2.new(1, -16, 0, 44)
+btnSpeed.Position = UDim2.fromOffset(8, 128)
+btnSpeed.BackgroundColor3 = Color3.fromRGB(28, 68, 48)
+btnSpeed.TextColor3 = UI_THEME.TextLight
 btnSpeed.Font = Enum.Font.GothamBold
-btnSpeed.TextScaled = true
+btnSpeed.TextSize = 10
 btnSpeed.Text = "⚡ SPEED Lv.1\nCost: $90 | -10% CD"
 btnSpeed.Parent = upgradePanel
 
 local btnSpdCorner = Instance.new("UICorner")
-btnSpdCorner.CornerRadius = UDim.new(0, 8)
+btnSpdCorner.CornerRadius = UDim.new(0, 6)
 btnSpdCorner.Parent = btnSpeed
 
 -- Safe Upgrade Dispatcher
@@ -560,17 +622,22 @@ btnSpeed.MouseButton1Click:Connect(function()
 	end
 end)
 
+toggleUpgradeBtn.MouseButton1Click:Connect(function()
+	upgradePanel.Visible = not upgradePanel.Visible
+end)
+
 -- =============================================================================
 -- SUBSYSTEM 4: CENTRAL WANTED POSTER GACHA MODAL
 -- =============================================================================
 
 local summonModal = Instance.new("Frame")
 summonModal.Name = "CentralWantedGachaModal"
-summonModal.Size = UDim2.fromOffset(560, 360)
-summonModal.Position = UDim2.new(0.5, -280, 0.5, -180)
-summonModal.BackgroundColor3 = Color3.fromRGB(20, 18, 32)
+summonModal.Size = UDim2.fromOffset(500, 330)
+summonModal.Position = UDim2.new(0.5, -250, 0.5, -165)
+summonModal.BackgroundColor3 = UI_THEME.BgDark
+summonModal.BackgroundTransparency = 0.15
 summonModal.BorderSizePixel = 0
-summonModal.Visible = true -- Open initially if player has 0 towers
+summonModal.Visible = false -- PLAN-0009: Hidden by default, toggled via [★ SUMMON]
 summonModal.Parent = screenGui
 
 local modalCorner = Instance.new("UICorner")
@@ -578,16 +645,16 @@ modalCorner.CornerRadius = UDim.new(0, 14)
 modalCorner.Parent = summonModal
 
 local modalStroke = Instance.new("UIStroke")
-modalStroke.Color = Color3.fromRGB(255, 205, 55)
-modalStroke.Thickness = 3
+modalStroke.Color = UI_THEME.AccentGold
+modalStroke.Thickness = 2
 modalStroke.Parent = summonModal
 
 local modalHeader = Instance.new("TextLabel")
 modalHeader.Name = "ModalHeader"
-modalHeader.Size = UDim2.new(1, -20, 0, 36)
+modalHeader.Size = UDim2.new(1, -20, 0, 32)
 modalHeader.Position = UDim2.fromOffset(10, 8)
 modalHeader.BackgroundTransparency = 1
-modalHeader.TextColor3 = Color3.fromRGB(255, 220, 65)
+modalHeader.TextColor3 = UI_THEME.AccentGold
 modalHeader.Font = Enum.Font.GothamBlack
 modalHeader.TextScaled = true
 modalHeader.Text = "🏴‍☠️ GRAND LINE WANTED POSTER GACHA 🏴‍☠️"
@@ -595,25 +662,25 @@ modalHeader.Parent = summonModal
 
 local wantedPosterCard = Instance.new("Frame")
 wantedPosterCard.Name = "WantedPosterCard"
-wantedPosterCard.Size = UDim2.new(1, -40, 0, 185)
-wantedPosterCard.Position = UDim2.fromOffset(20, 48)
-wantedPosterCard.BackgroundColor3 = Color3.fromRGB(34, 28, 48)
+wantedPosterCard.Size = UDim2.new(1, -32, 0, 170)
+wantedPosterCard.Position = UDim2.fromOffset(16, 44)
+wantedPosterCard.BackgroundColor3 = Color3.fromRGB(24, 28, 40)
 wantedPosterCard.BorderSizePixel = 0
 wantedPosterCard.Parent = summonModal
 
 local cardCorner = Instance.new("UICorner")
-cardCorner.CornerRadius = UDim.new(0, 10)
+cardCorner.CornerRadius = UDim.new(0, 8)
 cardCorner.Parent = wantedPosterCard
 
 local cardStroke = Instance.new("UIStroke")
-cardStroke.Color = Color3.fromRGB(255, 185, 45)
-cardStroke.Thickness = 2
+cardStroke.Color = UI_THEME.AccentGold
+cardStroke.Thickness = 1.5
 cardStroke.Parent = wantedPosterCard
 
 local rolledHeroDisplay = Instance.new("TextLabel")
 rolledHeroDisplay.Name = "RolledHeroDisplay"
-rolledHeroDisplay.Size = UDim2.new(1, -20, 1, -20)
-rolledHeroDisplay.Position = UDim2.fromOffset(10, 10)
+rolledHeroDisplay.Size = UDim2.new(1, -16, 1, -16)
+rolledHeroDisplay.Position = UDim2.fromOffset(8, 8)
 rolledHeroDisplay.BackgroundTransparency = 1
 rolledHeroDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
 rolledHeroDisplay.Font = Enum.Font.GothamBlack
@@ -624,8 +691,8 @@ rolledHeroDisplay.Parent = wantedPosterCard
 -- Action Buttons Row
 local btnSummon = Instance.new("TextButton")
 btnSummon.Name = "BtnSummon"
-btnSummon.Size = UDim2.fromOffset(250, 52)
-btnSummon.Position = UDim2.fromOffset(20, 245)
+btnSummon.Size = UDim2.fromOffset(226, 46)
+btnSummon.Position = UDim2.fromOffset(16, 222)
 btnSummon.BackgroundColor3 = Color3.fromRGB(255, 185, 30)
 btnSummon.TextColor3 = Color3.fromRGB(20, 15, 10)
 btnSummon.Font = Enum.Font.GothamBlack
@@ -639,8 +706,8 @@ summonBtnCorner.Parent = btnSummon
 
 local btnReroll = Instance.new("TextButton")
 btnReroll.Name = "BtnReroll"
-btnReroll.Size = UDim2.fromOffset(250, 52)
-btnReroll.Position = UDim2.fromOffset(290, 245)
+btnReroll.Size = UDim2.fromOffset(226, 46)
+btnReroll.Position = UDim2.fromOffset(258, 222)
 btnReroll.BackgroundColor3 = Color3.fromRGB(180, 55, 250)
 btnReroll.TextColor3 = Color3.fromRGB(255, 255, 255)
 btnReroll.Font = Enum.Font.GothamBlack
@@ -654,8 +721,8 @@ rerollBtnCorner.Parent = btnReroll
 
 local btnCloseModal = Instance.new("TextButton")
 btnCloseModal.Name = "BtnCloseModal"
-btnCloseModal.Size = UDim2.new(1, -40, 0, 42)
-btnCloseModal.Position = UDim2.fromOffset(20, 306)
+btnCloseModal.Size = UDim2.new(1, -32, 0, 40)
+btnCloseModal.Position = UDim2.fromOffset(16, 276)
 btnCloseModal.BackgroundColor3 = Color3.fromRGB(38, 185, 110)
 btnCloseModal.TextColor3 = Color3.fromRGB(255, 255, 255)
 btnCloseModal.Font = Enum.Font.GothamBlack
@@ -685,97 +752,104 @@ btnCloseModal.MouseButton1Click:Connect(function()
 	summonModal.Visible = false
 end)
 
--- Re-open / Toggle Modal Button
-local toggleGachaBtn = Instance.new("TextButton")
-toggleGachaBtn.Name = "ToggleGachaBtn"
-toggleGachaBtn.Size = UDim2.fromOffset(210, 44)
-toggleGachaBtn.Position = UDim2.new(0, 14, 0.5, -172)
-toggleGachaBtn.BackgroundColor3 = Color3.fromRGB(255, 195, 45)
-toggleGachaBtn.TextColor3 = Color3.fromRGB(24, 16, 12)
-toggleGachaBtn.Font = Enum.Font.GothamBlack
-toggleGachaBtn.TextScaled = true
-toggleGachaBtn.Text = "🎲 WANTED POSTER / GACHA"
-toggleGachaBtn.Parent = screenGui
-
-local toggleCorner = Instance.new("UICorner")
-toggleCorner.CornerRadius = UDim.new(0, 8)
-toggleCorner.Parent = toggleGachaBtn
-
 toggleGachaBtn.MouseButton1Click:Connect(function()
 	summonModal.Visible = not summonModal.Visible
 end)
 
 -- =============================================================================
--- SUBSYSTEM 5: BOTTOM BAG INVENTORY & 8-SLOT TACTICAL PAD MANAGER
+-- SUBSYSTEM 5: BOTTOM COMPACT HERO DOCK & BAG TRAY (PLAN-0009)
 -- =============================================================================
 
+-- 1. Compact Hero Dock (404x52 px centered at bottom Y = 1 - 58px)
+local heroDock = Instance.new("Frame")
+heroDock.Name = "CompactHeroDock"
+heroDock.Size = UDim2.new(0, 404, 0, 52)
+heroDock.Position = UDim2.new(0.5, -202, 1, -58)
+heroDock.BackgroundColor3 = UI_THEME.BgDark
+heroDock.BackgroundTransparency = 0.25
+heroDock.BorderSizePixel = 0
+heroDock.Parent = screenGui
+
+local heroDockCorner = Instance.new("UICorner")
+heroDockCorner.CornerRadius = UDim.new(0, 10)
+heroDockCorner.Parent = heroDock
+
+local heroDockStroke = Instance.new("UIStroke")
+heroDockStroke.Color = Color3.fromRGB(55, 62, 78)
+heroDockStroke.Thickness = 1
+heroDockStroke.Parent = heroDock
+
+type DockSlotEntry = {
+	Button: TextButton,
+	Stroke: UIStroke,
+	Conn1: RBXScriptConnection?,
+	Conn2: RBXScriptConnection?,
+}
+
+-- Pre-instantiate 8 tactical slot buttons inside dock
+local dockSlotBtns: { [number]: DockSlotEntry } = {}
+for i = 1, 8 do
+	local btn = Instance.new("TextButton")
+	btn.Name = "Slot_" .. i
+	btn.Size = UDim2.new(0, 44, 0, 44)
+	btn.Position = UDim2.new(0, 6 + (i - 1) * 49, 0, 4)
+	btn.BackgroundColor3 = UI_THEME.BgCard
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = 11
+	btn.TextColor3 = UI_THEME.TextLight
+	btn.Text = "-"
+	btn.Parent = heroDock
+
+	local sCorner = Instance.new("UICorner")
+	sCorner.CornerRadius = UDim.new(0, 6)
+	sCorner.Parent = btn
+
+	local sStroke = Instance.new("UIStroke")
+	sStroke.Color = Color3.fromRGB(70, 78, 95)
+	sStroke.Thickness = 1
+	sStroke.Parent = btn
+
+	dockSlotBtns[i] = { Button = btn, Stroke = sStroke, Conn1 = nil, Conn2 = nil }
+end
+
+-- 2. Compact Collapsible Bag Tray (attached right above dock at UDim2.new(0.5, -202, 1, -122), height 58 px)
 local bagPanel = Instance.new("Frame")
 bagPanel.Name = "BottomBagAndSlotPanel"
-bagPanel.Size = UDim2.new(0, 920, 0, 168)
-bagPanel.Position = UDim2.new(0.5, -460, 1, -178)
-bagPanel.BackgroundColor3 = Color3.fromRGB(14, 18, 28)
+bagPanel.Size = UDim2.new(0, 404, 0, 58)
+bagPanel.Position = UDim2.new(0.5, -202, 1, -122)
+bagPanel.BackgroundColor3 = UI_THEME.BgDark
+bagPanel.BackgroundTransparency = 0.20
 bagPanel.BorderSizePixel = 0
+bagPanel.Visible = false -- Auto-opens when units are in bag or summon modal opened
 bagPanel.Parent = screenGui
 
 local bagPanelCorner = Instance.new("UICorner")
-bagPanelCorner.CornerRadius = UDim.new(0, 12)
+bagPanelCorner.CornerRadius = UDim.new(0, 8)
 bagPanelCorner.Parent = bagPanel
 
 local bagPanelStroke = Instance.new("UIStroke")
-bagPanelStroke.Color = Color3.fromRGB(0, 200, 255)
-bagPanelStroke.Thickness = 2
+bagPanelStroke.Color = UI_THEME.AccentCyan
+bagPanelStroke.Thickness = 1
 bagPanelStroke.Parent = bagPanel
 
-local bagHeaderLbl = Instance.new("TextLabel")
-bagHeaderLbl.Name = "BagHeaderLabel"
-bagHeaderLbl.Size = UDim2.new(1, -20, 0, 24)
-bagHeaderLbl.Position = UDim2.fromOffset(10, 4)
-bagHeaderLbl.BackgroundTransparency = 1
-bagHeaderLbl.TextColor3 = Color3.fromRGB(255, 220, 90)
-bagHeaderLbl.Font = Enum.Font.GothamBold
-bagHeaderLbl.TextScaled = true
-bagHeaderLbl.Text = "🎒 INVENTORY BAG (SELECT UNIT) & 8 TACTICAL PADS (DEPLOY / ATOMIC SWAP / RECALL / SELL)"
-bagHeaderLbl.Parent = bagPanel
-
--- Row 1: Bag Container (Horizontal Scrolling/List)
 local bagScrolling = Instance.new("ScrollingFrame")
 bagScrolling.Name = "BagScrollingTray"
-bagScrolling.Size = UDim2.new(1, -20, 0, 60)
-bagScrolling.Position = UDim2.fromOffset(10, 30)
+bagScrolling.Size = UDim2.new(1, -8, 1, -8)
+bagScrolling.Position = UDim2.fromOffset(4, 4)
 bagScrolling.BackgroundTransparency = 1
 bagScrolling.BorderSizePixel = 0
-bagScrolling.CanvasSize = UDim2.new(2, 0, 0, 0)
-bagScrolling.ScrollBarThickness = 4
+bagScrolling.CanvasSize = UDim2.new(0, 0, 0, 0)
+bagScrolling.ScrollBarThickness = 3
 bagScrolling.Parent = bagPanel
 
 local bagLayout = Instance.new("UIListLayout")
 bagLayout.FillDirection = Enum.FillDirection.Horizontal
-bagLayout.Padding = UDim.new(0, 8)
+bagLayout.Padding = UDim.new(0, 6)
 bagLayout.Parent = bagScrolling
-
--- Row 2: 8 Tactical Placement Slot Buttons
-local slotsRow = Instance.new("Frame")
-slotsRow.Name = "TacticalSlotsRow"
-slotsRow.Size = UDim2.new(1, -20, 0, 64)
-slotsRow.Position = UDim2.fromOffset(10, 96)
-slotsRow.BackgroundTransparency = 1
-slotsRow.Parent = bagPanel
-
-local slotsLayout = Instance.new("UIListLayout")
-slotsLayout.FillDirection = Enum.FillDirection.Horizontal
-slotsLayout.Padding = UDim.new(0, 6)
-slotsLayout.Parent = slotsRow
 
 local function refreshBagAndSlotsUI()
 	-- Clear old bag units
 	for _, child in ipairs(bagScrolling:GetChildren()) do
-		if child:IsA("GuiObject") then
-			child:Destroy()
-		end
-	end
-
-	-- Clear old slots
-	for _, child in ipairs(slotsRow:GetChildren()) do
 		if child:IsA("GuiObject") then
 			child:Destroy()
 		end
@@ -788,76 +862,66 @@ local function refreshBagAndSlotsUI()
 	local units: { BagUnit } = (ok and typeof(bagList) == "table") and bagList or {}
 	local selectedUid = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.SELECTED_BAG_UID) :: string?) or ""
 
-	-- Update scrolling width
-	bagScrolling.CanvasSize = UDim2.new(0, math.max(#units * 168, 900), 0, 0)
+	-- Update scrolling width & bag drawer visibility
+	bagScrolling.CanvasSize = UDim2.new(0, math.max(#units * 140, 390), 0, 0)
+	bagPanel.Visible = (#units > 0 and (selectedUid ~= "" or summonModal.Visible))
 
-	if #units == 0 then
-		local emptyLbl = Instance.new("TextLabel")
-		emptyLbl.Size = UDim2.new(1, 0, 1, 0)
-		emptyLbl.BackgroundTransparency = 1
-		emptyLbl.TextColor3 = Color3.fromRGB(150, 165, 190)
-		emptyLbl.Font = Enum.Font.GothamBold
-		emptyLbl.TextScaled = true
-		emptyLbl.Text = "Bag is empty. Click [WANTED POSTER / GACHA] above to summon heroes!"
-		emptyLbl.Parent = bagScrolling
-	else
-		for _, unit in ipairs(units) do
-			local isSelected = (unit.Uid == selectedUid)
-			local unitCard = Instance.new("Frame")
-			unitCard.Size = UDim2.fromOffset(160, 54)
-			unitCard.BackgroundColor3 = isSelected and Color3.fromRGB(42, 88, 62) or Color3.fromRGB(26, 30, 46)
-			unitCard.BorderSizePixel = 0
-			unitCard.Parent = bagScrolling
+	for _, unit in ipairs(units) do
+		local isSelected = (unit.Uid == selectedUid)
+		local unitCard = Instance.new("Frame")
+		unitCard.Size = UDim2.fromOffset(130, 48)
+		unitCard.BackgroundColor3 = isSelected and Color3.fromRGB(42, 88, 62) or Color3.fromRGB(26, 30, 46)
+		unitCard.BorderSizePixel = 0
+		unitCard.Parent = bagScrolling
 
-			local uCorner = Instance.new("UICorner")
-			uCorner.CornerRadius = UDim.new(0, 8)
-			uCorner.Parent = unitCard
+		local uCorner = Instance.new("UICorner")
+		uCorner.CornerRadius = UDim.new(0, 6)
+		uCorner.Parent = unitCard
 
-			local uStroke = Instance.new("UIStroke")
-			uStroke.Color = isSelected and Color3.fromRGB(75, 255, 140) or Color3.fromRGB(80, 95, 125)
-			uStroke.Thickness = isSelected and 2 or 1
-			uStroke.Parent = unitCard
+		local uStroke = Instance.new("UIStroke")
+		uStroke.Color = isSelected and Color3.fromRGB(75, 255, 140) or Color3.fromRGB(80, 95, 125)
+		uStroke.Thickness = isSelected and 2 or 1
+		uStroke.Parent = unitCard
 
-			local selectBtn = Instance.new("TextButton")
-			selectBtn.Size = UDim2.new(0.68, 0, 1, 0)
-			selectBtn.BackgroundTransparency = 1
-			selectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-			selectBtn.Font = Enum.Font.GothamBold
-			selectBtn.TextScaled = true
-			selectBtn.Text = string.format("%s\n[%s]", unit.Name, unit.Rarity)
-			selectBtn.Parent = unitCard
+		local selectBtn = Instance.new("TextButton")
+		selectBtn.Size = UDim2.new(0.65, 0, 1, 0)
+		selectBtn.BackgroundTransparency = 1
+		selectBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		selectBtn.Font = Enum.Font.GothamBold
+		selectBtn.TextSize = 10
+		selectBtn.Text = string.format("%s\n[%s]", unit.Name, unit.Rarity)
+		selectBtn.Parent = unitCard
 
-			selectBtn.MouseButton1Click:Connect(function()
-				local re = getPlacementActionRemote()
-				if re then
-					re:FireServer("SelectBagUnit", unit.Uid)
-				end
-			end)
+		selectBtn.MouseButton1Click:Connect(function()
+			local re = getPlacementActionRemote()
+			if re then
+				re:FireServer("SelectBagUnit", unit.Uid)
+			end
+		end)
 
-			local sellBagBtn = Instance.new("TextButton")
-			sellBagBtn.Size = UDim2.new(0.32, 0, 1, 0)
-			sellBagBtn.Position = UDim2.fromScale(0.68, 0)
-			sellBagBtn.BackgroundColor3 = Color3.fromRGB(205, 45, 55)
-			sellBagBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-			sellBagBtn.Font = Enum.Font.GothamBlack
-			sellBagBtn.TextScaled = true
-			sellBagBtn.Text = string.format("SELL\n+$%d", unit.SellValue or 150)
-			sellBagBtn.Parent = unitCard
+		local sellBagBtn = Instance.new("TextButton")
+		sellBagBtn.Size = UDim2.new(0.35, 0, 1, 0)
+		sellBagBtn.Position = UDim2.fromScale(0.65, 0)
+		sellBagBtn.BackgroundColor3 = Color3.fromRGB(205, 45, 55)
+		sellBagBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		sellBagBtn.Font = Enum.Font.GothamBlack
+		sellBagBtn.TextSize = 10
+		sellBagBtn.Text = string.format("SELL\n+$%d", unit.SellValue or 150)
+		sellBagBtn.Parent = unitCard
 
-			local sellCorner = Instance.new("UICorner")
-			sellCorner.CornerRadius = UDim.new(0, 6)
-			sellCorner.Parent = sellBagBtn
+		local sellCorner = Instance.new("UICorner")
+		sellCorner.CornerRadius = UDim.new(0, 4)
+		sellCorner.Parent = sellBagBtn
 
-			sellBagBtn.MouseButton1Click:Connect(function()
-				local re = getPlacementActionRemote()
-				if re then
-					re:FireServer("SellFromBag", unit.Uid)
-				end
-			end)
-		end
+		sellBagBtn.MouseButton1Click:Connect(function()
+			local re = getPlacementActionRemote()
+			if re then
+				re:FireServer("SellFromBag", unit.Uid)
+			end
+		end)
 	end
 
-	-- Render 8 Tactical Slot Buttons
+	-- Render 8 Tactical Slot Buttons inside CompactHeroDock
 	local towersFolder = Workspace:FindFirstChild("AnimeTowers")
 	local slotList: { SlotDef } = GameConfig.PLACEMENT_SLOTS or {}
 
@@ -872,89 +936,50 @@ local function refreshBagAndSlotsUI()
 			end
 		end
 
-		local slotCard = Instance.new("Frame")
-		slotCard.Size = UDim2.fromOffset(106, 58)
-		slotCard.BackgroundColor3 = occupant and Color3.fromRGB(48, 38, 20) or Color3.fromRGB(20, 44, 34)
-		slotCard.BorderSizePixel = 0
-		slotCard.Parent = slotsRow
+		local slotEntry = dockSlotBtns[idx]
+		if slotEntry then
+			local btn = slotEntry.Button
+			local stroke = slotEntry.Stroke
 
-		local sCorner = Instance.new("UICorner")
-		sCorner.CornerRadius = UDim.new(0, 8)
-		sCorner.Parent = slotCard
-
-		local sStroke = Instance.new("UIStroke")
-		sStroke.Color = occupant and Color3.fromRGB(255, 190, 45) or Color3.fromRGB(40, 205, 110)
-		sStroke.Thickness = 1
-		sStroke.Parent = slotCard
-
-		local occupantHeroName: string? = nil
-		if occupant then
-			local heroId = (occupant:GetAttribute("HeroId") :: string?) or "Tower"
-			local hero = findHeroSpec(heroId)
-			occupantHeroName = hero and hero.Name or heroId
-		end
-
-		local mainSlotBtn = Instance.new("TextButton")
-		mainSlotBtn.Size = UDim2.new(1, 0, occupant and 0.54 or 1, 0)
-		mainSlotBtn.BackgroundTransparency = 1
-		mainSlotBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-		mainSlotBtn.Font = Enum.Font.GothamBold
-		mainSlotBtn.TextScaled = true
-		if occupant and occupantHeroName then
-			mainSlotBtn.Text = string.format("S%d: %s\n[SWAP]", idx, occupantHeroName)
-		else
-			mainSlotBtn.Text = string.format("Slot %d: PLACE", idx)
-		end
-		mainSlotBtn.Parent = slotCard
-
-		mainSlotBtn.MouseButton1Click:Connect(function()
-			local re = getPlacementActionRemote()
-			if re then
-				re:FireServer("PlaceOrSwap", slotSpec.SlotId, selectedUid)
+			if occupant then
+				local heroId = (occupant:GetAttribute("HeroId") :: string?) or "Tower"
+				local info = HERO_ACRONYMS[heroId]
+				local acronym = info and info.Acronym or string.sub(heroId, 7, 9)
+				local accent = info and info.Accent or Color3.fromRGB(255, 205, 50)
+				stroke.Color = accent
+				btn.TextColor3 = accent
+				btn.Text = string.format("%s\nS%d", acronym, idx)
+			else
+				stroke.Color = Color3.fromRGB(70, 78, 95)
+				btn.TextColor3 = (selectedUid ~= "") and Color3.fromRGB(80, 240, 140) or UI_THEME.TextMuted
+				btn.Text = (selectedUid ~= "") and string.format("+\n$%d", 100) or "-"
 			end
-		end)
 
-		if occupant then
-			-- Sub-button 1: Recall to Bag
-			local recallBtn = Instance.new("TextButton")
-			recallBtn.Size = UDim2.new(0.5, -2, 0.44, 0)
-			recallBtn.Position = UDim2.new(0, 1, 0.54, 0)
-			recallBtn.BackgroundColor3 = Color3.fromRGB(42, 115, 215)
-			recallBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-			recallBtn.Font = Enum.Font.GothamBold
-			recallBtn.TextScaled = true
-			recallBtn.Text = "BAG"
-			recallBtn.Parent = slotCard
+			-- Disconnect old connections to prevent leaks
+			if slotEntry.Conn1 then
+				slotEntry.Conn1:Disconnect()
+				slotEntry.Conn1 = nil
+			end
+			if slotEntry.Conn2 then
+				slotEntry.Conn2:Disconnect()
+				slotEntry.Conn2 = nil
+			end
 
-			local rCorner = Instance.new("UICorner")
-			rCorner.CornerRadius = UDim.new(0, 4)
-			rCorner.Parent = recallBtn
-
-			recallBtn.MouseButton1Click:Connect(function()
+			-- Slot Click Actions (Atomic Place/Swap, Recall to Bag, and Sell)
+			slotEntry.Conn1 = btn.MouseButton1Click:Connect(function()
 				local re = getPlacementActionRemote()
 				if re then
-					re:FireServer("StoreToBag", slotSpec.SlotId)
+					if occupant and selectedUid == "" then
+						re:FireServer("StoreToBag", slotSpec.SlotId)
+					else
+						re:FireServer("PlaceOrSwap", slotSpec.SlotId, selectedUid)
+					end
 				end
 			end)
 
-			-- Sub-button 2: Sell Tower
-			local sellSlotBtn = Instance.new("TextButton")
-			sellSlotBtn.Size = UDim2.new(0.5, -2, 0.44, 0)
-			sellSlotBtn.Position = UDim2.new(0.5, 1, 0.54, 0)
-			sellSlotBtn.BackgroundColor3 = Color3.fromRGB(215, 45, 45)
-			sellSlotBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-			sellSlotBtn.Font = Enum.Font.GothamBold
-			sellSlotBtn.TextScaled = true
-			sellSlotBtn.Text = "SELL"
-			sellSlotBtn.Parent = slotCard
-
-			local scCorner = Instance.new("UICorner")
-			scCorner.CornerRadius = UDim.new(0, 4)
-			scCorner.Parent = sellSlotBtn
-
-			sellSlotBtn.MouseButton1Click:Connect(function()
+			slotEntry.Conn2 = btn.MouseButton2Click:Connect(function()
 				local re = getPlacementActionRemote()
-				if re then
+				if re and occupant then
 					re:FireServer("SellFromSlot", slotSpec.SlotId)
 				end
 			end)
@@ -963,53 +988,93 @@ local function refreshBagAndSlotsUI()
 end
 
 -- =============================================================================
--- SUBSYSTEM 6: 3-CARD WAVE DRAFT MODAL (12 ROGUELIKE CARDS)
+-- SUBSYSTEM 6: 3-CARD WAVE DRAFT MODAL (12 ROGUELIKE CARDS) (PLAN-0009)
 -- =============================================================================
 
 local draftModal = Instance.new("Frame")
 draftModal.Name = "WaveCardDraftModal"
-draftModal.Size = UDim2.fromOffset(780, 340)
-draftModal.Position = UDim2.new(0.5, -390, 0.5, -170)
-draftModal.BackgroundColor3 = Color3.fromRGB(12, 14, 24)
+draftModal.Size = UDim2.new(0, 500, 0, 175)
+draftModal.Position = UDim2.new(0.5, -250, 0, 44)
+draftModal.BackgroundColor3 = UI_THEME.BgDark
+draftModal.BackgroundTransparency = 0.15
 draftModal.BorderSizePixel = 0
 draftModal.Visible = false
 draftModal.Parent = screenGui
 
 local draftModalCorner = Instance.new("UICorner")
-draftModalCorner.CornerRadius = UDim.new(0, 16)
+draftModalCorner.CornerRadius = UDim.new(0, 10)
 draftModalCorner.Parent = draftModal
 
 local draftModalStroke = Instance.new("UIStroke")
-draftModalStroke.Color = Color3.fromRGB(255, 215, 60)
-draftModalStroke.Thickness = 3
+draftModalStroke.Color = UI_THEME.AccentGold
+draftModalStroke.Thickness = 1.5
 draftModalStroke.Parent = draftModal
 
 local draftHeader = Instance.new("TextLabel")
 draftHeader.Name = "DraftHeader"
-draftHeader.Size = UDim2.new(1, -30, 0, 40)
-draftHeader.Position = UDim2.fromOffset(15, 10)
+draftHeader.Size = UDim2.new(1, -140, 0, 24)
+draftHeader.Position = UDim2.new(0, 12, 0, 4)
 draftHeader.BackgroundTransparency = 1
-draftHeader.TextColor3 = Color3.fromRGB(255, 220, 65)
-draftHeader.Font = Enum.Font.GothamBlack
-draftHeader.TextScaled = true
-draftHeader.Text = "⚡ WAVE CLEARED! CHOOSE 1 ROGUELIKE CARD ⚡"
+draftHeader.TextColor3 = UI_THEME.AccentGold
+draftHeader.Font = Enum.Font.GothamBold
+draftHeader.TextSize = 12
+draftHeader.TextXAlignment = Enum.TextXAlignment.Left
+draftHeader.Text = "SELECT WAVE UPGRADE CARD"
 draftHeader.Parent = draftModal
 
-local cardsRow = Instance.new("Frame")
-cardsRow.Name = "CardsRow"
-cardsRow.Size = UDim2.new(1, -30, 0, 265)
-cardsRow.Position = UDim2.fromOffset(15, 56)
-cardsRow.BackgroundTransparency = 1
-cardsRow.Parent = draftModal
+local collapseToggleBtn = Instance.new("TextButton")
+collapseToggleBtn.Name = "CollapseToggleBtn"
+collapseToggleBtn.Size = UDim2.new(0, 24, 0, 20)
+collapseToggleBtn.Position = UDim2.new(1, -126, 0, 6)
+collapseToggleBtn.BackgroundColor3 = Color3.fromRGB(35, 40, 52)
+collapseToggleBtn.Font = Enum.Font.GothamBold
+collapseToggleBtn.TextSize = 11
+collapseToggleBtn.TextColor3 = UI_THEME.TextLight
+collapseToggleBtn.Text = "[-]"
+collapseToggleBtn.Parent = draftModal
 
-local cardsLayout = Instance.new("UIListLayout")
-cardsLayout.FillDirection = Enum.FillDirection.Horizontal
-cardsLayout.Padding = UDim.new(0, 14)
-cardsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-cardsLayout.Parent = cardsRow
+local ctCorner = Instance.new("UICorner")
+ctCorner.CornerRadius = UDim.new(0, 4)
+ctCorner.Parent = collapseToggleBtn
+
+local rerollBtn = Instance.new("TextButton")
+rerollBtn.Name = "RerollCardsBtn"
+rerollBtn.Size = UDim2.new(0, 88, 0, 20)
+rerollBtn.Position = UDim2.new(1, -96, 0, 6)
+rerollBtn.BackgroundColor3 = Color3.fromRGB(45, 85, 165)
+rerollBtn.Font = Enum.Font.GothamBold
+rerollBtn.TextSize = 10
+rerollBtn.TextColor3 = UI_THEME.TextLight
+rerollBtn.Text = "Reroll ($50)"
+rerollBtn.Parent = draftModal
+
+local rCorner = Instance.new("UICorner")
+rCorner.CornerRadius = UDim.new(0, 4)
+rCorner.Parent = rerollBtn
+
+local cardsContainer = Instance.new("Frame")
+cardsContainer.Name = "CardsContainer"
+cardsContainer.Size = UDim2.new(1, 0, 0, 140)
+cardsContainer.Position = UDim2.new(0, 0, 0, 30)
+cardsContainer.BackgroundTransparency = 1
+cardsContainer.Parent = draftModal
+
+local isDraftCollapsed = false
+collapseToggleBtn.MouseButton1Click:Connect(function()
+	isDraftCollapsed = not isDraftCollapsed
+	if isDraftCollapsed then
+		draftModal.Size = UDim2.new(0, 500, 0, 30)
+		cardsContainer.Visible = false
+		collapseToggleBtn.Text = "[+]"
+	else
+		draftModal.Size = UDim2.new(0, 500, 0, 175)
+		cardsContainer.Visible = true
+		collapseToggleBtn.Text = "[-]"
+	end
+end)
 
 local function populateThreeDraftCards()
-	for _, c in ipairs(cardsRow:GetChildren()) do
+	for _, c in ipairs(cardsContainer:GetChildren()) do
 		if c:IsA("GuiObject") then
 			c:Destroy()
 		end
@@ -1028,64 +1093,45 @@ local function populateThreeDraftCards()
 	for i = 1, pickCount do
 		local card = poolCopy[i]
 		local cardBtn = Instance.new("TextButton")
-		cardBtn.Name = "CardBtn_" .. card.Id
-		cardBtn.Size = UDim2.fromOffset(236, 255)
-		cardBtn.BackgroundColor3 = card.BgColor or Color3.fromRGB(28, 20, 38)
+		cardBtn.Name = "UpgradeCard_" .. i
+		cardBtn.Size = UDim2.new(0, 154, 0, 134)
+		cardBtn.Position = UDim2.new(0, 10 + (i - 1) * 163, 0, 2)
+		cardBtn.BackgroundColor3 = card.BgColor or UI_THEME.BgCard
 		cardBtn.Text = ""
-		cardBtn.Parent = cardsRow
+		cardBtn.Parent = cardsContainer
 
 		local cCorner = Instance.new("UICorner")
-		cCorner.CornerRadius = UDim.new(0, 12)
+		cCorner.CornerRadius = UDim.new(0, 8)
 		cCorner.Parent = cardBtn
 
 		local cStroke = Instance.new("UIStroke")
-		cStroke.Color = card.BorderColor or Color3.fromRGB(255, 205, 50)
-		cStroke.Thickness = 3
+		cStroke.Thickness = 1.5
+		cStroke.Color = card.BorderColor or UI_THEME.AccentGold
 		cStroke.Parent = cardBtn
 
-		local rarityLbl = Instance.new("TextLabel")
-		rarityLbl.Size = UDim2.new(1, -16, 0, 28)
-		rarityLbl.Position = UDim2.fromOffset(8, 8)
-		rarityLbl.BackgroundTransparency = 1
-		rarityLbl.TextColor3 = card.BorderColor or Color3.fromRGB(255, 205, 50)
-		rarityLbl.Font = Enum.Font.GothamBlack
-		rarityLbl.TextScaled = true
-		rarityLbl.Text = string.format("[%s]\n%s", card.Rarity, card.Category)
-		rarityLbl.Parent = cardBtn
+		local title = Instance.new("TextLabel")
+		title.Name = "CardTitle"
+		title.Size = UDim2.new(1, -12, 0, 36)
+		title.Position = UDim2.new(0, 6, 0, 8)
+		title.BackgroundTransparency = 1
+		title.Font = Enum.Font.GothamBlack
+		title.TextSize = 12
+		title.TextWrapped = true
+		title.TextColor3 = UI_THEME.TextLight
+		title.Text = card.Title
+		title.Parent = cardBtn
 
-		local titleLbl = Instance.new("TextLabel")
-		titleLbl.Size = UDim2.new(1, -16, 0, 58)
-		titleLbl.Position = UDim2.fromOffset(8, 42)
-		titleLbl.BackgroundTransparency = 1
-		titleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-		titleLbl.Font = Enum.Font.GothamBlack
-		titleLbl.TextScaled = true
-		titleLbl.Text = card.Title
-		titleLbl.Parent = cardBtn
-
-		local descLbl = Instance.new("TextLabel")
-		descLbl.Size = UDim2.new(1, -16, 0, 110)
-		descLbl.Position = UDim2.fromOffset(8, 104)
-		descLbl.BackgroundTransparency = 1
-		descLbl.TextColor3 = Color3.fromRGB(220, 235, 255)
-		descLbl.Font = Enum.Font.GothamBold
-		descLbl.TextScaled = true
-		descLbl.Text = card.Desc
-		descLbl.Parent = cardBtn
-
-		local selectBadge = Instance.new("TextLabel")
-		selectBadge.Size = UDim2.new(1, -24, 0, 28)
-		selectBadge.Position = UDim2.new(0, 12, 1, -34)
-		selectBadge.BackgroundColor3 = card.BorderColor or Color3.fromRGB(255, 205, 50)
-		selectBadge.TextColor3 = Color3.fromRGB(20, 20, 25)
-		selectBadge.Font = Enum.Font.GothamBlack
-		selectBadge.TextScaled = true
-		selectBadge.Text = "SELECT CARD"
-		selectBadge.Parent = cardBtn
-
-		local bCorner = Instance.new("UICorner")
-		bCorner.CornerRadius = UDim.new(0, 6)
-		bCorner.Parent = selectBadge
+		local desc = Instance.new("TextLabel")
+		desc.Name = "CardDesc"
+		desc.Size = UDim2.new(1, -12, 0, 74)
+		desc.Position = UDim2.new(0, 6, 0, 48)
+		desc.BackgroundTransparency = 1
+		desc.Font = Enum.Font.GothamMedium
+		desc.TextSize = 11
+		desc.TextWrapped = true
+		desc.TextColor3 = Color3.fromRGB(110, 240, 155)
+		desc.Text = card.Desc
+		desc.Parent = cardBtn
 
 		cardBtn.MouseButton1Click:Connect(function()
 			local re = getCardDraftRemote()
@@ -1101,6 +1147,24 @@ local function populateThreeDraftCards()
 	end
 end
 
+rerollBtn.MouseButton1Click:Connect(function()
+	local rf = getUpgradeStatRemoteFunc()
+	local re = getUpgradeEventRemote()
+	if rf then
+		task.spawn(function()
+			local ok, res = pcall(function()
+				return rf:InvokeServer("RerollCards")
+			end)
+			if ok and typeof(res) == "table" and res.success then
+				populateThreeDraftCards()
+			end
+		end)
+	elseif re then
+		re:FireServer("RerollCards")
+		populateThreeDraftCards()
+	end
+end)
+
 -- =============================================================================
 -- MASTER REACTIVE UI STATE SYNCHRONIZATION
 -- =============================================================================
@@ -1108,65 +1172,41 @@ end
 local lastRenderedDraws: number = 0
 
 local function refreshAllUI()
-	-- 1. Wave Status & Header
+	-- 1. Wave Status & Header (Top Status Pill Single-Line Format)
 	local wave = (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.CURRENT_WAVE) :: number?) or 1
 	local waveStatus = (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.WAVE_STATUS) :: string?) or "READY"
 	local prepCount = (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN) :: number?) or 0
 	local isGameOver = (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.GAME_OVER) :: boolean?) or false
-	local zombiesLeft = (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.ZOMBIES_REMAINING) :: number?) or 0
-
-	if isGameOver then
-		waveStatusLbl.TextColor3 = Color3.fromRGB(255, 60, 60)
-		waveStatusLbl.Text = "💀 BASE DESTROYED! RESTARTING WAVE 1..."
-	elseif prepCount > 0 or waveStatus == "PREP PHASE" then
-		waveStatusLbl.TextColor3 = Color3.fromRGB(255, 215, 60)
-		waveStatusLbl.Text = string.format("⏳ PREP PHASE: %ds | PLACE A TOWER ON FIELD TO START!", prepCount)
-	else
-		waveStatusLbl.TextColor3 = Color3.fromRGB(255, 220, 70)
-		waveStatusLbl.Text = string.format("🌊 GRAND LINE WAVE %d | STATUS: %s | ENEMIES: %d", wave, waveStatus, zombiesLeft)
-	end
-
-	-- 2. Base HP Bar
 	local curBaseHp = (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.BASE_HP) :: number?) or 1000
-	local maxBaseHp = (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.MAX_BASE_HP) :: number?) or 1000
-	local hpRatio = math.clamp(curBaseHp / math.max(1, maxBaseHp), 0, 1)
 
-	hpBarFill.Size = UDim2.new(hpRatio, 0, 1, 0)
-	if hpRatio > 0.50 then
-		hpBarFill.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
-	elseif hpRatio > 0.25 then
-		hpBarFill.BackgroundColor3 = Color3.fromRGB(241, 196, 15)
-	else
-		hpBarFill.BackgroundColor3 = Color3.fromRGB(231, 76, 60)
-	end
-	hpBarText.Text = string.format("THOUSAND SUNNY BASE HP: %d / %d (%.0f%%)", curBaseHp, maxBaseHp, hpRatio * 100)
-
-	-- 3. Player Stats & Resources
 	local ls = localPlayer:FindFirstChild("leaderstats")
 	local cashObj = ls and ls:FindFirstChild("Cash") :: IntValue?
 	local currentCash = cashObj and cashObj.Value or ((localPlayer:GetAttribute("Cash") :: number?) or 500)
 
+	if isGameOver then
+		statusLabel.TextColor3 = Color3.fromRGB(255, 60, 60)
+		statusLabel.Text = "💀 BASE DESTROYED! RESTARTING WAVE 1..."
+		earlyStartBtn.Visible = false
+	elseif prepCount > 0 or waveStatus == "PREP PHASE" then
+		statusLabel.TextColor3 = Color3.fromRGB(255, 215, 60)
+		statusLabel.Text = string.format("⏳ PREP: %ds  •  HP %d  •  $%d", prepCount, curBaseHp, currentCash)
+		earlyStartBtn.Visible = true
+	else
+		statusLabel.TextColor3 = Color3.fromRGB(240, 244, 250)
+		statusLabel.Text = string.format("WAVE %d  •  HP %d  •  $%d", wave, curBaseHp, currentCash)
+		earlyStartBtn.Visible = false
+	end
+
+	-- 2. Player Stats & Resources
 	local freeTickets = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.FREE_SUMMON_TICKETS) :: number?) or 0
 	local rerollTokens = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.REROLL_TOKENS) :: number?) or 0
-	local placedTowers = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.PLACED_TOWERS_COUNT) :: number?) or 0
-	local maxTowers = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.MAX_PLACED_TOWERS) :: number?) or 4
-
 	local curDmg = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.DAMAGE_STAT) :: number?) or 50
 	local curRng = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.RANGE_STAT) :: number?) or 30
 	local curCd = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.COOLDOWN_STAT) :: number?) or 1.15
-	local curCrit = ((localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.CRIT_CHANCE) :: number?) or 0.08) * 100
-	local curCritDmg = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.CRIT_DAMAGE) :: number?) or 2.0
-	local curSplash = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.SPLASH_STAT) :: number?) or 7
-	local curBounty = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.BOUNTY_MULT) :: number?) or 1.0
 	local dps = math.floor(curDmg / math.max(0.12, curCd))
+	upgradeTitle.Text = string.format("POWER UPGRADES (DPS: %d)", dps)
 
-	statsSummaryLbl.Text = string.format(
-		"💰 $%d | 🎟️ %d | 🪙 %d | 🗼 %d/%d | ⚔️ DMG: %d | 🎯 RNG: %d | ⚡ CD: %.2fs | 💥 CRIT: %.0f%% (%.2fx) | 🌊 AoE: %d | 🏴‍☠️ BOUNTY: %.1fx | DPS: %d",
-		currentCash, freeTickets, rerollTokens, placedTowers, maxTowers,
-		curDmg, curRng, curCd, curCrit, curCritDmg, curSplash, curBounty, dps
-	)
-
-	-- 4. Stat Upgrades Buttons (Levels, Costs & Affordability)
+	-- 3. Stat Upgrades Buttons (Levels, Costs & Affordability)
 	local dmgLvl = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.DAMAGE_LEVEL) :: number?) or 1
 	local rngLvl = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.RANGE_LEVEL) :: number?) or 1
 	local spdLvl = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.SPEED_LEVEL) :: number?) or 1
@@ -1191,7 +1231,7 @@ local function refreshAllUI()
 		btnSpeed.BackgroundColor3 = (currentCash >= spdCost) and Color3.fromRGB(28, 68, 48) or Color3.fromRGB(56, 32, 38)
 	end
 
-	-- 5. Wanted Poster Modal Hero Display & Summon/Reroll Costs
+	-- 4. Wanted Poster Modal Hero Display & Summon/Reroll Costs
 	btnSummon.Text = (freeTickets > 0) and string.format("🎲 SUMMON (FREE x%d)", freeTickets) or "🎲 SUMMON ($100)"
 	btnReroll.Text = (rerollTokens > 0) and string.format("🔄 REROLL (Token x%d)", rerollTokens) or "🔄 REROLL ($80)"
 
@@ -1214,7 +1254,7 @@ local function refreshAllUI()
 		rolledHeroDisplay.Text = "WELCOME TO GRAND LINE!\n\nNo towers deployed on the map.\nPress [SUMMON HERO] below to recruit your first One Piece pirate!"
 	end
 
-	-- 6. 3-Card Wave Draft Modal Visibility & Sequential Refresh
+	-- 5. 3-Card Wave Draft Modal Visibility & Sequential Refresh
 	local pendingDraws = (localPlayer:GetAttribute(GameConfig.PLAYER_ATTRS.PENDING_CARD_DRAWS) :: number?) or 0
 	if pendingDraws > 0 then
 		if not draftModal.Visible or lastRenderedDraws ~= pendingDraws then
@@ -1228,7 +1268,7 @@ local function refreshAllUI()
 		draftModal.Visible = false
 	end
 
-	-- 7. Bag and 8-Slot Pad Status
+	-- 6. Bag and 8-Slot Pad Status
 	refreshBagAndSlotsUI()
 end
 

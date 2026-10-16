@@ -524,6 +524,15 @@ local function handleRerollCards(player: Player): boolean
 	return false
 end
 
+local function handleEarlyStart(player: Player): boolean
+	local prepAttr = GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN or "PrepCountdown"
+	Workspace:SetAttribute(prepAttr, 0)
+	local waveStatusAttr = GameConfig.WORKSPACE_ATTRS.WAVE_STATUS or "WaveStatus"
+	Workspace:SetAttribute(waveStatusAttr, "HERO READY! STARTING WAVE 1...")
+	Workspace:SetAttribute("EarlyStartTriggered", true)
+	return true
+end
+
 -- =============================================================================
 -- REMOTE EVENT & REMOTE FUNCTION DISPATCH HANDLERS
 -- =============================================================================
@@ -535,12 +544,15 @@ local function onUpgradeStatInvoke(player: Player, statTypeOrAction: any): any
 	end
 	local actionStr = statTypeOrAction :: string
 
-	if actionStr == "BuyExtraCardDraw" then
+	if actionStr == "EarlyStart" then
+		local ok = handleEarlyStart(player)
+		return { success = ok, action = actionStr }
+	elseif actionStr == "BuyExtraCardDraw" then
 		local ok = handleBuyExtraCardDraw(player)
 		return { success = ok, action = actionStr }
 	elseif actionStr == "RerollCards" then
 		local ok = handleRerollCards(player)
-		return { success = ok, action = actionStr }
+		return { success = ok, action = actionStr, remainingCash = getCash(player) }
 	elseif string.sub(actionStr, 1, 5) == "Card_" or findCard(actionStr) ~= nil then
 		local ok, errReason = handleCardSelect(player, actionStr)
 		return { success = ok, cardId = actionStr, reason = errReason }
@@ -564,7 +576,9 @@ local function onUpgradeEvent(player: Player, statTypeOrAction: any)
 	end
 	local actionStr = statTypeOrAction :: string
 
-	if actionStr == "BuyExtraCardDraw" then
+	if actionStr == "EarlyStart" then
+		handleEarlyStart(player)
+	elseif actionStr == "BuyExtraCardDraw" then
 		handleBuyExtraCardDraw(player)
 	elseif actionStr == "RerollCards" then
 		handleRerollCards(player)
