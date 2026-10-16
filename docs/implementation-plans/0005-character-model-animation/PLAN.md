@@ -166,6 +166,6 @@ Shanks/Whitebeard/Law/Kizaru; Sanji/Nami/Usopp/Robin/Chopper; PirateGrunt/SoruAs
 
 ## 11. Handoff และเอกสารท้ายแผน
 
-[HANDOFF](assets/HANDOFF.md) อนุญาต AGY ทำ scope Phase5 ทุก wave ต่อเนื่องแล้วส่ง REVIEW READY ตอนท้าย ไม่มีสิทธิ์ AGY commit แม้เพื่อ SHA tracking; ใช้ฐาน Git หลัง commit เอกสาร handoff + working-tree diff และ hash เมื่อจำเป็น
+[HANDOFF](assets/HANDOFF.md) อนุญาต AGY ทำ scope Phase5 ทุก wave ต่อเนื่องแล้วส่ง REVIEW READY ตอนท้าย ผู้ใช้อนุญาต AGY commit + push origin/main ทุก milestone M0..M5 ตาม HANDOFF ล่าสุด; ใช้ execution base, milestone SHAs และ final SHA จริงสำหรับตรวจรวม ไม่ถือ commit/push ว่าผ่านรีวิว
 
 P5-23 เป็นงานท้ายสุดสำหรับ sync เอกสารที่อนุมัติไว้กับสิ่งที่ทำจริง; ไม่เปลี่ยน scope/spec ย้อนหลังเพื่อทำให้ผลผ่าน Codex จะตรวจเอกสารและ actual ref ก่อนสรุป technical verdict ส่วน Owner acceptance ต้องมีหลักฐานต่างหาก

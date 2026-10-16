@@ -16,4 +16,4 @@
     - [PLAN-0002: Track 2 Anime Towers & Combat](implementation-plans/0002-anime-towers-and-combat/PLAN.md)
     - [PLAN-0003: Track 3 Infinite Upgrade UI & Server](implementation-plans/0003-infinite-upgrade-and-ui/PLAN.md)
     - [PLAN-0004: Track 4 Multi-Track Integration & Master UAT](implementation-plans/0004-multi-track-integration-and-uat/PLAN.md)
-    - [PLAN-0005: Phase 5 Character Model, Signature Animation, VFX & Animation Lab](implementation-plans/0005-character-model-animation/PLAN.md) — ผู้ใช้อนุญาต AGY ทำ Phase5 ทุก stream; Codex รีวิวรวมท้ายงาน; อ่าน HANDOFF ล่าสุดก่อนเริ่ม; ยังไม่สร้าง branch/worktree
+    - [PLAN-0005: Phase 5 Character Model, Signature Animation, VFX & Animation Lab](implementation-plans/0005-character-model-animation/PLAN.md) — ผู้ใช้อนุญาต AGY ทำ Phase5 ทุก stream; Codex รีวิวรวมท้ายงาน; ใช้ [HANDOFF ใบเดียว](implementation-plans/0005-character-model-animation/assets/HANDOFF.md); AGY commit+push ราย milestone ได้; ยังไม่สร้าง branch/worktree

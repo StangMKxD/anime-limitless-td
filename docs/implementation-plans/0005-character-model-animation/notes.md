@@ -55,4 +55,6 @@ Static file/XML/Git: inspected ตามรายการข้างต้น;
 ## อำนาจดำเนินการหลังเตรียมแผน
 
 - **N-11 [CONFIRMED]:** คำสั่งผู้ใช้ 2026-10-17 (Asia/Bangkok): “ขอ prompt ให้ agy ทำงานให้เสร็จทุกแผนเลย แล้วนายรอ รีวิวทีเดียว”; AGY ทำ Phase5 ทั้งหมด แล้ว Codex รีวิวรวมตอนท้าย; ไม่มี AGY session/ผล implementation ที่ยืนยันแล้ว
-- **N-12 [CONFIRMED]:** ผู้ใช้สั่ง “commit +push เลย” สำหรับชุดเอกสารในรอบนี้; สิทธิ์นี้ไม่ส่งต่อให้ AGY commit implementation ในอนาคต ดู HANDOFF ล่าสุด
+- **N-12 [CONFIRMED]:** ผู้ใช้สั่ง “commit +push เลย” สำหรับชุดเอกสารในรอบนี้; ภายหลังผู้ใช้อนุญาต AGY commit+push implementation ทุก milestone M0..M5 ตาม HANDOFF ล่าสุด ข้อห้ามเดิมถูกแทนที่เฉพาะ scope นี้
+
+- **N-13 [CONFIRMED]:** ผู้ใช้ 2026-10-17 ขอ prompt/เอกสารสั่งงานใบเดียว และอนุญาต AGY commit+push ราย milestone; HANDOFF เป็นสัญญาหลักเดียว M0..M5, final independent review โดย Codex ยังไม่เกิด

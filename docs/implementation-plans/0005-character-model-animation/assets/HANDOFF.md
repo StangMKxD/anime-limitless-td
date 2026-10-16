@@ -1,29 +1,127 @@
-# PLAN-0005 — Primary Handoff Contract
+# PLAN-0005 — เอกสารส่งงาน AGY ใบเดียว: Phase5 + Milestone Commit/Push
 
-## Authority / readiness
+## 1. อำนาจล่าสุดและสถานะ
 
-- **Status:** IMPLEMENTATION_SCOPE_AUTHORIZED / PENDING_AGY_START; ยังไม่มีผล implementation หรือ independent review
-- **Governance:** Strict SoD; Codex Controller/Reviewer, AGY Teamwork-preview Implementer
-- **Approval evidence:** คำสั่งผู้ใช้ 2026-10-17 (Asia/Bangkok): “ขอ prompt ให้ agy ทำงานให้เสร็จทุกแผนเลย แล้วนายรอ รีวิวทีเดียว”
-- **Review cadence:** AGY ทำทุก wave และตรวจภายในต่อเนื่อง; Codex รอตรวจ actual diff/evidence รวมตอนท้ายตามคำสั่งนี้ ไม่ใช่ external approval ราย wave
-- **Source baseline:** main @ d5d06216b2f8bc6ba43071d453709e0d3e0e8df4
-- **Execution base:** ให้ AGY อ่าน git rev-parse HEAD หลัง commit เอกสาร handoff นี้และบันทึกลง root TASKS ก่อนเริ่ม; ห้ามอ้าง SHA ที่ยังไม่สร้าง
-- **AGY session:** ยังไม่รับงาน/ไม่มีข้อมูล session ID; prompt นี้ผู้ใช้นำไปส่งเอง
-- **AGY local commits for SHA tracking:** NOT AUTHORIZED; ส่ง working-tree diff + base/current SHA/hash ของไฟล์ที่เกี่ยวข้อง
-- **Git operations:** ใช้ main เดิม; ยังไม่อนุญาต branch/worktree/subagents; ห้าม AGY commit/push/merge/deploy
-- **Codex Git exception:** ผู้ใช้สั่ง “commit +push เลย” สำหรับชุดเอกสาร Phase5 รอบนี้โดยชัดแจ้ง ไม่ใช่สิทธิ์ commit implementation รอบหน้า
+- **Status:** IMPLEMENTATION_AUTHORIZED / PENDING_AGY_START; ยังไม่ VERIFIED/ACCEPTED/CLOSED
+- **ผู้สั่ง:** Stang, 2026-10-17 Asia/Bangkok; คำสั่งก่อนหน้าให้ AGY ทำทุกแผนแล้ว Codex รีวิวรวมตอนท้าย
+- **คำสั่งล่าสุด:** “ขอ prompt และเอกสาร อันเดียว พร้อม comit pushให้ agy commit ไดด้เป็นช่วงๆ ทุกๆ milestone”
+- **สิทธิ์ที่ได้รับ:** AGY implement + ทดสอบ + commit และ push origin/main ราย milestone M0..M5 โดยไม่ต้องขออนุมัติซ้ำทุกครั้ง; เป็นข้อยกเว้นจากนโยบาย no-commit เดิมเฉพาะ Phase5 นี้
+- **Independent reviewer:** Codex รอตรวจรวม actual final SHA และ evidence ตอนท้าย การตรวจภายใน/commit/push ไม่ใช่ independent approval หรือปิดงาน
+- **เอกสารสั่งงานหลัก:** ไฟล์นี้ใบเดียว ครอบคลุม scope/tasks/milestones/Git/gates/ส่งตรวจ; PLAN/tasks/spec เดิมเป็น design reference ไม่ใช่ handoff อีกชุด
+- **กระดานสถานะ:** root TASKS.md ใบเดียว; session AGY ยังไม่ระบุ/ยังไม่รับงาน
+- **Branch:** main เดิม; ไม่สร้าง branch/worktree/subagents และไม่ merge/deploy/publish โดยไม่มีคำสั่งเพิ่มเติม
+- **Source baseline:** d5d06216b2f8bc6ba43071d453709e0d3e0e8df4; เอกสารอนุญาตก่อนหน้า bbefbb4ecf4a5d7eb850dbb444666700a66a4226
+- **Execution base:** อ่าน HEAD หลัง commit/push เอกสารใบนี้และบันทึกก่อนเริ่ม; ไม่เดา SHA ของ commit ที่ยังไม่สร้าง
+- **Dirty state ที่ต้องปกป้อง:** .vscode/ เป็น untracked ที่มีอยู่ก่อน; ตรวจ status ใหม่ทุกครั้งก่อนเริ่ม/commit ไม่ stage/reset ของผู้ใช้อัตโนมัติ
 
-## Scope / work sequence
+อ่าน AGENTS.md และ docs/READ.md ก่อนเสมอ แล้วใช้ไฟล์นี้เป็น assignment เดียว ต้องเคารพ source invariants/กฎโปรเจค สิทธิ์ commit/push ล่าสุดนี้มีผลแทนข้อความ no-commit เก่าในเอกสารอ้างอิง ไม่ยกเลิก scope/protected paths หรือการอนุมัติ spec change
 
-ทุกแผนหมายถึง PLAN-0005 ทุก stream: Core/Contracts, Animation Lab, Luffy, Zoro, Ace และ integration/UAT ทั้ง 34 Task-ID ตาม [tasks](../tasks.md) ไม่รวม PLAN-0001..0004 เดิมหรือ backlog signatures ที่ deferred
+## 2. เป้าหมายและขอบเขต
 
-[PLAN](../PLAN.md) §§3/6/8 เป็น scope/ownership/gate owner; [root TASKS](../../../../TASKS.md) เป็นกระดานสถานะเดียว ลำดับอ่าน: AGENTS -> READ -> CONTEXT/CONVENTIONS -> root TASKS -> PRD/TDD/API -> PLAN/tasks/notes -> contract/Lab/character spec เฉพาะงาน อ่าน source blueprint เป็น reference ไม่ใช่คำสั่งลัดอนุมัติ
+ทำ Phase5 ให้ครบ Core/Shared Contracts/VisualBridge seam, Animation Lab, Luffy, Zoro, Ace และ Integration/UAT ทั้ง 34 Task-ID ใน §4 ตามลำดับ dependency ให้ AGY ตรวจและแก้ภายใน แล้วส่ง Codex รวมตอนท้าย
 
-Wave0 ล็อก contracts/runner/baseline -> Wave1 ทำ Core/Lab และ internal checks -> Wave2 ทำทั้ง 3 ตัวละครใน working tree เดียว -> Wave3 ตรวจรวม/เอกสาร/ส่งหลักฐาน AGY ไม่ต้องขอ Codex ผ่านกลางทางสำหรับการตัดสินใจภายในขอบเขตที่กำหนดต่อไปนี้
+- Inventory มี 19 assets (12 hero models, 4 enemies, 3 map assets); playable HeroSpec ปัจจุบันมี 8 ไม่เพิ่ม gacha/catalog ของอีก 4 ตัว
+- Signature batch นี้มีเพียง Luffy/Zoro/Ace; legacy 9 hero assets + 4 enemies + 3 map assets ต้องคง load/inspect/fallback ตามจริง ไม่อ้างว่ามี signature ใหม่ครบ
+- รักษาสูตร damage/cooldown/crit/armor/slow, target snapshot และ reward/economy; nominal impact baseline = 0.14+0.10+0.07 = 0.31s ก่อน recovery delay
+- รักษา geometry/detail ของโมเดลเดิม Luffy122/Zoro139/Ace128 BaseParts; cap 22/24/21 ในต้นทางยังไม่อนุมัติและห้ามใช้เป็นเหตุยุบโมเดล
+- ไม่ทำ enemy walk rewrite, อีก 9 signatures/4 enemies, client-side animation migration ทั้งเกม, skinned mesh/Blender/uploaded animation, curve editor หรือ featureใหม่
 
-ห้ามอ้างว่าทุก gate ผ่านหากยังมีข้อมูลขาด ทำงานอิสระต่อให้ครบก่อนส่งรวม; หากติดเงื่อนไขที่ต้องเปลี่ยน spec/scope จริง หยุดเฉพาะส่วนที่เกี่ยวข้องและระบุ blocker ไม่แก้ canonical spec ย้อนหลังเพื่อให้ implementation ใช้ได้
+## 3. Ownership และพื้นที่ห้ามแตะ
 
-## Decision handling — ขอบเขตที่ Controller ล็อกสำหรับส่งต่อ
+| Stream | Owned paths ที่ implement ได้ |
+|---|---|
+| Core | src/Shared/AnimationContract.luau; src/Shared/VFXContract.luau; src/AssetKit/VisualBridge.server.luau เฉพาะ hero binding/welding seam; src/Track2_TowerSystem/TowerController.server.luau เฉพาะ visual/rig/combat decoupling ที่ preserve semantics; AnimationController.luau, AnimationRegistry.luau, VFXDispatcher.luau ภายใต้ Track2; Animations/_FallbackProfile.luau; VFX/_FallbackVFX.luau |
+| Lab | src/DevTools/AnimationLab/** รวม client/server entrypoints/test-only harness; default.project.json เฉพาะ mapping ที่ต้องใช้; tests/phase5_core_and_lab.spec.luau |
+| Luffy | assets/rojo/HeroModels/Luffy.rbxmx; src/Track2_TowerSystem/Animations/Luffy.luau; src/Track2_TowerSystem/VFX/LuffyVFX.luau; tests/characters/luffy_anim_vfx.spec.luau |
+| Zoro | assets/rojo/HeroModels/Zoro.rbxmx; src/Track2_TowerSystem/Animations/Zoro.luau; src/Track2_TowerSystem/VFX/ZoroVFX.luau; tests/characters/zoro_anim_vfx.spec.luau |
+| Ace | assets/rojo/HeroModels/Ace.rbxmx; src/Track2_TowerSystem/Animations/Ace.luau; src/Track2_TowerSystem/VFX/AceVFX.luau; tests/characters/ace_anim_vfx.spec.luau |
+| Tracking/docs | root TASKS.md, plan notes.md, evidence ที่จำเป็น; canonical doc sync เฉพาะ D-07 ด้านล่าง; ไม่เขียน review-NNN แทน Codex |
+
+**Protected:** AGENTS.md, docs/CONVENTIONS.md, src/Shared/GameConfig.luau, Track1/Track3 ทั้งหมด, assets/rojo/EnemyModels/**, MapModels/** และ hero อีก 9 ไฟล์ ไม่มีสิทธิ์เปลี่ยนกฎหรือขยาย ownership เพื่อแก้ติดขัดเอง
+
+## 4. Milestones และรายการงานครบ 34 IDs
+
+M0 -> M1 -> M2 -> M3 -> M4 -> M5 ใน working tree เดียว ลำดับ character แบบต่อเนื่องเพื่อไม่ต้องสร้าง agent/worktree เพิ่ม ทำ internal checks ที่เกี่ยวข้องให้ครบแต่ละ milestone แล้ว commit+push ไม่ต้องรอ Codex ตรวจกลางทาง
+
+### M0 — Contracts / baseline / runner (P5-00..P5-06)
+
+| Task-ID | ผลส่งมอบ | จุดตรวจภายในก่อนส่งต่อ |
+|---|---|---|
+| P5-00 | Recheck HEAD/status/XML inventory 19 และ dirty paths | baseline จริง + protected user changes |
+| P5-01 | Reconcile canonical docs เฉพาะ Phase5 ตาม D-07 | scope/spec delta ระบุที่มา |
+| P5-02 | Freeze combat oracle: timing/cadence/stat snapshot/crit/armor/slow/sell | nominal hit 0.31s; scheduler จริงต้องวัด |
+| P5-03 | ล็อก AnimationContract + alias + semantic rig + ownership handshake | missing/duplicate limb, rest/reset/cancel/scale ชัด |
+| P5-04 | ล็อก VFXContract/cues/quality/caps/resource ledger | lifecycle idempotent; no damage callbacks |
+| P5-05 | ล็อก Lab server/client mapping + Studio command/isolation | no cross-track require/production side effects |
+| P5-06 | Preflight tool/test runner และ verification manifest | ไม่เดา harness/คำสั่งและไม่ติดตั้ง dependency เอง |
+
+### M1 — Core runtime + Animation Lab (P5-07..P5-17)
+
+| Task-ID | ผลส่งมอบ | จุดตรวจภายในก่อนส่งต่อ |
+|---|---|---|
+| P5-07 | Single visual ownership ใน VisualBridge/Track2 | bridge-first/Track2-first/rebind ไม่ clone ซ้ำ |
+| P5-08 | Idempotent semantic RigBuilder | joint/world motion จริง, accessory parent ถูก |
+| P5-09 | Deterministic procedural player + lifecycle | play/pause/seek/cancel/scale/reset ไม่มี drift |
+| P5-10 | VFXDispatcher + resource tracking/caps | quality/layers/TTL/cleanup ไม่ block combat |
+| P5-11 | แยก server damage timer จาก visual | oracle เดิม; VFX off/error/spam ไม่เปลี่ยน damage |
+| P5-12 | Studio bootstrap/Rojo/client-server/session lifecycle | guard ก่อน allocate และ cleanup ทุก exit |
+| P5-13 | Workspace stage/camera/grid/markers/BBox/accessory/scale | restore camera/input/local effects; no game state mutation |
+| P5-14 | Animation player + VFX inspector controls | seek ไม่ replay cue; state ที่ไม่มี disableพร้อมreason |
+| P5-15 | 19-model explorer + truthful validator | แยก template/clone/module/runtime/visual; map rig N/A |
+| P5-16 | Scoped telemetry + stress 1/10/25/50 | tracked/estimated metrics แยก, no orphan after cleanup |
+| P5-17 | Core/fallback/Lab internal verification barrier | แก้ failure; missing tools เปิดเผย; Codex ตรวจตอนท้าย |
+
+### M2 — Luffy (L-01..L-04)
+
+| Task-ID | ผลส่งมอบ | จุดตรวจภายในก่อนส่งต่อ |
+|---|---|---|
+| L-01 | Refine existing Luffy model + 6-joint semantic rig | preserve detail; right-arm multiparts + shoulder pivot |
+| L-02 | Luffy 8-state animation | Joyboy/Laugh/Spawn/Stretch Punch/Bajrang; stretch/reset ถูก |
+| L-03 | Luffy VFX module | cloud/scarf/black-red Haki/sonic rings/giant fist; tracked TTL |
+| L-04 | Luffy automated + Studio/visual checks | visible limb delta, arm/attachment rest <0.001 ตามวิธีวัด, no leak |
+
+### M3 — Zoro (Z-01..Z-04)
+
+| Task-ID | ผลส่งมอบ | จุดตรวจภายในก่อนส่งต่อ |
+|---|---|---|
+| Z-01 | Refine existing Zoro + 9-joint weapon rig | Wado mouth / Enma right / Sandai left / scabbards torso |
+| Z-02 | Zoro 8-state animation | guard/Enma idle/draw/cross slash/103 Mercies; swordsไม่หลุด |
+| Z-03 | Zoro VFX module | green-purple-gold flame/three trails/slash arcs; stop clears trails |
+| Z-04 | Zoro automated + Studio/visual checks | actual blade/hand/head relation + reset/TTL/destroy |
+
+### M4 — Ace (A-01..A-04)
+
+| Task-ID | ผลส่งมอบ | จุดตรวจภายในก่อนส่งต่อ |
+|---|---|---|
+| A-01 | Refine existing Ace + 6-joint/accessory rig | hat->head; beads/dagger->torso; hand/overhead attachments |
+| A-02 | Ace 8-state animation | flame finger/hat tip/pillar spawn/Hiken/Entei; aimถูก |
+| A-03 | Ace VFX module | fire charge/projectile-beam/scorch rings/sunball; quality lights |
+| A-04 | Ace automated + Studio/visual checks | hat follows head; Entei above raised hand; no leftover VFX |
+
+### M5 — Integration / UAT / documentation (P5-20..P5-23)
+
+| Task-ID | ผลส่งมอบ | จุดตรวจภายในก่อนส่งต่อ |
+|---|---|---|
+| P5-20 | Mixed 3 signatures + legacy fallback integration | 19 assetsยังโหลด; ไม่เพิ่ม catalog/แก้ registryจากcharacterโดยพลการ |
+| P5-21 | Gameplay/isolation regression ตาม manifest | fresh commands/ref/exits; ไม่ลด assertions; no economy drift |
+| P5-22 | Measured stress/cleanup/visual acceptance | device/build/quality/duration/frametime/peak/delta จริง; budget pendingเปิดเผย |
+| P5-23 | Final doc sync + final handover | 34 tasks + 6 milestone SHAs/push + final ref + scope/doc audit |
+
+## 5. รายละเอียดสำคัญของ character/Core/Lab
+
+- **Rig:** Luffy/Ace เป้าหมาย 6 body joints (RootJoint/Neck/shoulders/hips), Zoroเพิ่ม WeaponRight/WeaponLeft/WeaponMouth รวม9; geometryจริงเป็น UpperArm/Forearm/Fist และ _2 หลายชิ้น ต้อง mapจากตำแหน่งจริง ไม่สมมุติว่าเป็น R6 สำเร็จรูป
+- **Hierarchy:** Track2 เป็น rig owner, bridgeไม่ clone skinซ้อน/ซ่อนvisiblerig; semantic pivotsควบคุมหลายgeometryparts; weld decorationsอยู่parentlimbที่ถูก; ห้าม rigid path ล็อกข้ามmotor ต้องตรวจทั้ง Part0/Part1 และ indirect graph
+- **Player:** rest-relative C0/C1/Size/attachment data ต่อ model; states Idle, SpecialIdle, Spawn, Windup, Attack, Impact, Recovery, Ultimate; deterministic seek/loop/speed0.1–2, frame step +/-1/60; hard reset/destroy ชนะ canCancel=false; seekไม่ยิงcueย้อนหลัง
+- **Character feel:** Luffyเด้ง/หัวเราะ/ยืดแขนและหมัดยักษ์; ZoroคาบWado มือขวาEnma มือซ้ายSandai พร้อมSantoryuและKing of Hell; Aceชาร์จHikenและชูมือสร้างEnteiก่อนขว้าง สี/ท่า/accessoryตามสเปก batch1 เดิม ไม่สร้างfeatureเพิ่ม
+- **VFX:** common cues PassiveAura/SpawnDeploy/AttackWindup/AttackRelease/AttackImpact/UltimateCast/UltimateImpact; SpecialIdle cue extensionต้องล็อกในcontract; Low/Medium/High, layer toggles, intensity0.1–2, per-model/session caps; ทุกinstance/tween/task/connectionเข้าownerledgerและcleanupซ้ำได้
+- **Combat:** serverเป็นauthority, visual fire-and-forget ไม่ถือdamagecallback; duplicate/error/cancel visualไม่สร้างHP change/RNGเพิ่ม; cooldownสั้นกว่าจังหวะimpactยังรองรับoverlapเหมือนbaseline; sell/destroyยกเลิกpendingตามsemanticsเดิม
+- **Lab:** Studio-only server/client entrypointsถูกservices; local UIไม่require ServerScriptService; Workspace stageหลักสำหรับVFX, ViewportFrameแค่previewรอง; model explorer19, orbit/zoom/presets/focus, grid/markers/BBox/accessorytoggle/scale0.5–2.5, timeline/player/VFXinspector/telemetry/stress1/10/25/50
+- **Isolation:** persessioncontainers, กล้อง/input/localpostFXต้องคืนทุกexit; dummyไม่เข้า Enemies/rewardlistener; productionreturnก่อนallocateUI/remotes/listeners; ระยะY5000ไม่ใช่หลักประกันแยกstate
+- **Telemetry:** parts/instancesแยก, particlecountเป็นestimate, tweens/tasks/connectionsนับเฉพาะtrackedsubset; ledgerต้องคู่subtree scan; ทุกตัวเลขperformanceมีdevice/build/quality/duration/methodจริง ไม่เท่ากับผลผ่านอัตโนมัติ
+
+Design references เฉพาะเมื่อจำเป็นต้องดูค่าท่ารายละเอียด: [Luffy](../characters/01-luffy.md), [Zoro](../characters/02-zoro.md), [Ace](../characters/03-ace.md), [Lab](04-animation-lab-ui.md), [contracts](contracts-and-integration.md), [source pack](../../../../requirement/phase5/phase_5_master_plan_and_agent_pack.md) พิมพ์เขียวเป็นตัวอย่างที่ยังต้องตรวจ ไม่คัดลอกเป็นverifiedcode
+
+## 6. Decision handling / bounded canonical doc sync
 
 | Decision | วิธีดำเนินการที่อยู่ในสิทธิ์ครั้งนี้ | สิ่งที่ยังไม่อนุมัติ |
 |---|---|---|
@@ -47,33 +145,60 @@ D-01..D-06 เป็น delegated engineering ภายในขอบเขต�
 - ทำ P5-01 reconciliation และ P5-23 final sync; ระบุเหตุผลและ requirement mapping ของทุก doc change เพื่อให้ Codex ตรวจละเอียดรวมตอนท้าย หากต้องลบ/เปลี่ยนข้อความเดิมที่ขัดกัน ให้เสนอ patch แยกและรออนุมัติก่อนทำส่วนนั้น
 - AGENTS.md / CONVENTIONS.md / GameConfig / Track1 / Track3 / enemy-map assets และ hero อีก 9 ไฟล์ยังเป็น protected paths ตาม PLAN
 
-## Verification / final delivery
+## 7. นโยบาย commit + push ทุก milestone (อนุญาตแล้ว)
 
-- G-01..G-13 ไม่ถูกลดจากคำสั่งให้รีวิวครั้งเดียว; internal checkpoints ไม่ใช่ independent sign-off
-- Preflight commands จาก repo: node tests/run_all_tests.mjs เป็น existing static/simulation runner; existing .test.mjs suites ให้ AGY อ่านและระบุ manifest ก่อนรัน คำสั่ง build/typecheck/Studio spec ต้องตรวจ tool availability และ runner จริงก่อน; รอบ Codex นี้ไม่รัน application tests
-- ส่ง command/cwd/base-current ref/exit/status แยก static/automated/engine/visual; full regression ต้องครอบคลุม manifest ที่ตกลง ไม่อ้าง regex/JS simulation ว่า engine verified
-- Visual/performance ทดสอบจริงเมื่อเครื่องมือพร้อม; ถ้าขาดให้บันทึก unavailable และผลกระทบ ห้ามสร้าง screenshots/logs/results เพื่อทดแทนสิ่งที่ไม่ตรวจ
-- ตรวจเอกสารทุกไฟล์ที่แก้เพื่อ scope/spec drift; final package มี task coverage ครบ 34 IDs, file ownership audit, base SHA/current HEAD/working-tree diff และ evidence pointers
-- AGY อัปเดต root TASKS เป็น READY_FOR_REVIEW เมื่อส่งครบ หรือ BLOCKED เมื่อมี blocker ระบุชัด; ไม่ APPROVE/PASS/CLOSE งานเอง
-- Codex อ่าน actual diff และผลหลักฐาน แล้วเขียน review-NNN ต่อรอบโดยใช้ F-ID คงที่ แก้ in-scope ด้วย HANDOFF เดิม; ถ้าจำเป็นต้องแก้หลัง review ยังต้องตรวจ ref ใหม่ ไม่รับรอง unresolved blocker หรือ stale SHA
+1. ก่อนเริ่ม M0 ตรวจ branch/HEAD/status/remotes; execution base ต้องมี HANDOFF เวอร์ชันนี้ และบันทึก actual SHA ใน root TASKS ไม่ตั้งค่า identity/remote ใหม่เอง
+2. ทำงานใน milestone ตาม ownership; เขียนและรัน test ทีละ public seam ตาม red-green เมื่อเหมาะสม แก้ relevant failures ก่อนประกาศ milestoneเสร็จ ไม่ลดassertion/ข้ามfailureให้เขียว
+3. ถ้าเครื่องมือ Studio/visualไม่มี ให้รายงาน IMPLEMENTED_UNVERIFIED / NOT VERIFIED พร้อมข้อจำกัดและทำงานอิสระต่อ อนุญาตcheckpoint commit/pushตามจริง แต่ห้ามกล่าวว่าgateผ่านหรือmilestoneverified
+4. ก่อน commit ตรวจ unstaged/staged diff และ doc scope; stageเฉพาะรายชื่อไฟล์ที่ตรวจในmilestoneด้วย explicit paths ไม่ใช้ git add . / -A ไม่รวม .vscode, credentials, generatedbuilds หรือ unrelateduserfiles
+5. Commit แบบระบุ milestone/Task-ID ด้วยข้อความไทย เช่น feat(PLAN-0005/M1/P5-07..17): แยกริกและสร้างแล็บทดสอบ; M0ใช้docs/featตามเนื้อหาจริง, M5ระบุintegration/verification/docsตามdiff
+6. หลังcommitอ่าน SHAจากGit แล้ว push แบบปกติด้วย git push origin main; ไม่ force, amend/rebase/rewrite shared history, merge หรือเปลี่ยนbranch ถ้าremoteเปลี่ยนจนpushถูกปฏิเสธให้รายงานสภาพจริงและหยุดเฉพาะGitstepที่ติด ห้ามรีเซ็ตทับงานผู้ใช้
+7. M0..M5 มี commitอย่างน้อยหนึ่งก้อนต่อmilestone; อาจแยกtask/fixเพิ่มเมื่อมีเหตุผล แต่ไม่จับทั้ง6milestoneรวมcommitเดียว ห้ามemptycommitเพื่อทำให้ตารางดูครบ
+8. จดmilestone/Task-IDs/command-results/commitSHA/pushstatusตามจริงในnotesหรืออ้างgitlog ไม่สร้างreportsซ้ำ; SHAของcommitปัจจุบันจดหลังcommit/ในบันทึกmilestoneถัดไปได้ FinalSHAส่งในคำตอบสุดท้าย ไม่พยายามใส่hashของcommitลงตัวมันเอง
+9. คำสั่งนี้ไม่อนุญาตปิดงานหรือประกาศAPPROVED/PASS/CLOSED; Codexตรวจรวมที่finalSHAหลังM5 การpushไม่ใช่reviewsignoff
 
-## Copy-ready AGY prompt
+## 8. Gates G-01..G-13 และรูปแบบหลักฐาน
+
+| Gate | ต้องพิสูจน์ | สถานะตั้งต้น |
+|---|---|---|
+| G-01 | load/clone/inspect19 assets;3 signatures+16legacyตามจริง | NOT VERIFIED |
+| G-02 | expectedjointsและvisiblelimb/weapon worldCFrameขยับจริงหลังenginestep ไม่มีrigidlock | NOT VERIFIED |
+| G-03 | accessories/3swordsตามparentถูกทุกstate/มุม | NOT VERIFIED |
+| G-04 | pause/seek/cancel/reset/scale/replayคืนrest ไม่มีdrift/stalecontext | NOT VERIFIED |
+| G-05 | VFXcue/position/direction/layers/qualityถูกและseekไม่emitซ้ำ | NOT VERIFIED |
+| G-06 | damage timing/cadence/RNG/armor/splash/slow/sellไม่เปลี่ยนจากvisual | NOT VERIFIED |
+| G-07 | destroy/sell/reset/closeไม่เหลือownedresource/references; ledger+subtreeตรง | NOT VERIFIED |
+| G-08 | sandbox/productionguardไม่แก้gameplay/economy/wave/rewards | NOT VERIFIED |
+| G-09 | mixedcharacters+legacyไม่แย่งstate; stressแยกจากcapเกมปกติ8 | NOT VERIFIED |
+| G-10 | actualstress1/10/25/50+environment+budgetที่ยืนยันได้; ตัวเลขที่ยังไม่อนุมัติคงpending | NOT VERIFIED |
+| G-11 | existingPhases1–4+Phase5suite manifestรันจริงและรายงานexit/status | NOT VERIFIED |
+| G-12 | actualStudio/visualครบ3characters+Lab; ไม่มีผลจริงห้ามถือผ่าน ไม่บังคับภาพวิดีโอ | NOT VERIFIED |
+| G-13 | finaldiff+ทุกdocchangeอยู่approvedscope ไม่มีspec/ownershipdrift | NOT VERIFIED |
+
+ผลแยก4ประเภท: StaticInspection, AutomatedTests (ระบุNode simulation/engine), StudioRuntime, ManualVisual พร้อมcommand/cwd/ref/exit/statusหรือเหตุunavailable Existing candidateคือ node tests/run_all_tests.mjs ส่วนsuite .test.mjs/build/typecheck/Studioharnessให้preflightจากของจริงก่อนรัน ไม่ติดตั้งdependencyหรือเดาคำสั่งเอง Normalpassingtestsไม่ต้องเก็บlogซ้ำ เก็บเฉพาะevidenceที่จำเป็นต่อperformance/failure/ข้อสรุป
+
+## 9. ส่ง Codex รวมครั้งเดียวตอนท้าย
+
+- ส่งexecutionbase/finalSHA, gitlogของM0..M5และpushstatus, changed-pathlist และworkingtreeที่ยังเหลือ (ถ้ามี)
+- รายงานครบ34Task-IDว่าทำ/ยังขาดอะไรพร้อมgateevidence; ห้ามอ้างallcompleteหากยังมีblocker/unverifiedgate
+- ส่งtestmanifest/commands/cwd/exits, Studio/visual/performanceจริง, openD-IDs/budget/limitations, docschangeและscope audit; ไม่สร้างRESULT/summary/checklistซ้ำหลายไฟล์
+- rootTASKSเป็นREADY_FOR_REVIEWเมื่อpackageครบ หรือBLOCKEDพร้อมเหตุจริง งานอิสระทำต่อให้ครบก่อนถามข้อที่จำเป็น
+- Codexจะอ่านactualcommitdiffตั้งแต่executionbaseถึงfinalSHA และevidenceรวม เขียนreview-NNNตามรอบ/F-IDเดิม; ถ้าต้องแก้ภายหลังใช้HANDOFFเดิมและต้องตรวจrefใหม่ ไม่อนุมัติstaleSHAหรือunresolvedblocker
+
+## 10. Prompt เดียวสำหรับส่ง AGY
 
 ```text
-ทำงานใน C:\Users\Stang\anime-limitless-td ใช้ agy teamwork-preview และ stang-darkmatter
-ผู้ใช้อนุญาตให้ทำ Phase5 ครบทุกแผนย่อยแล้ว: Core/Contracts, Luffy, Zoro, Ace, Animation Lab และ Integration/UAT รวม 34 งานตาม PLAN-0005 ไม่รวม backlog 9 heroes/4 enemies หรือแผนเก่านอก Phase5
+ทำ Phase5 ใน C:\Users\Stang\anime-limitless-td ให้ครบทุก stream ด้วย agy teamwork-preview / stang-darkmatter
+ใช้เอกสารสั่งงานหลักเพียงใบเดียว: docs/implementation-plans/0005-character-model-animation/assets/HANDOFF.md อ่านกฎ AGENTS.md และ docs/READ.md ก่อน แล้วทำตาม HANDOFF ทุกหัวข้อ เอกสารอื่นเป็น design references ตามที่ HANDOFF ชี้เท่านั้น
 
-อ่าน AGENTS.md, docs/READ.md, docs/CONVENTIONS.md, root TASKS.md แล้วอ่าน docs/implementation-plans/0005-character-model-animation/assets/HANDOFF.md เป็นสัญญาหลัก พร้อม PLAN.md, tasks.md, notes.md และสเปกราย stream ตาม reading order
+ผู้ใช้อนุญาตให้ implement ทั้ง 34 งาน และให้ AGY commit + push origin/main เมื่อจบแต่ละ milestone แล้ว โดย Codex จะรอรีวิวรวมตอนท้าย ไม่ต้องขออนุมัติซ้ำทุก milestone
 
-ตรวจ git status/HEAD ก่อนเริ่ม ใช้ HEAD หลัง commit เอกสาร handoff เป็น execution base; source baseline คือ d5d06216b2f8bc6ba43071d453709e0d3e0e8df4 ห้ามทับงานค้างผู้ใช้ ทำบน main ที่มีอยู่ ยังไม่สร้าง branch/worktree/subagents และห้าม commit/push/merge/deploy เอง
+ตรวจ HEAD/status ก่อนเริ่มและปกป้อง .vscode/ กับงานค้างผู้ใช้ ทำ M0 Contracts -> M1 Core/Lab -> M2 Luffy -> M3 Zoro -> M4 Ace -> M5 Integration/UAT/Doc sync บน main เดิม ยังไม่สร้าง branch/worktree/subagents
+แต่ละ milestone ต้องตรวจและแก้ failure ภายในก่อน stage เฉพาะไฟล์ใน scope, commit ข้อความไทยระบุ PLAN-0005/Mx/Task-ID แล้ว push แบบปกติไป origin/main บันทึก commit SHA และผล push ตามจริง ห้าม git add ., force push, rewrite history, merge/deploy หรือปิดงานเอง
 
-ทำ Wave0 -> Wave1 -> Wave2 -> Wave3 ต่อเนื่องตาม dependencies และ ownership ตรวจและแก้ปัญหาภายในให้ครบ ไม่ส่ง Codex ตรวจหรือรออนุมัติซ้ำทุก wave; Codex รอตรวจรวมเมื่อส่งงานท้าย Phase5 ถ้าติดเครื่องมือ/visual ให้ทำงานที่ไม่ติดขัดต่อก่อน หยุดถามเฉพาะเมื่อเป็นการเปลี่ยน spec/scope/protected path หรือข้อมูลจำเป็นที่ตรวจหาไม่ได้
+ยึด scope/protected paths/Decision handling ใน HANDOFF รักษารายละเอียดโมเดลและ damage timing 0.31s ห้ามเพิ่ม feature/rebalance/require ข้าม Track หรือขยายสเปกเอง การแก้ PRD/TDD/API/CONTEXT ทำได้เฉพาะ bounded additive sync ที่ Codex อนุญาตใน HANDOFF ถ้าต้องเปลี่ยนเกินนั้นให้เสนอ diff ก่อน
 
-ยึด Decision handling ใน HANDOFF: คงรายละเอียดโมเดลเดิม ห้ามยุบ geometry ให้ได้ cap 22/24/21; รักษา combat nominal impact 0.31s และสูตรเดิม; ไม่ require ข้าม Track; แยก Lab server/client และ Studio-only isolation; ล็อก contract/harness ด้วยหลักฐานก่อนใช้จริง
+ตรวจ gates G-01..G-13 และแยก Static/Automated/Studio Runtime/Manual Visual จากกัน ผลที่ทำไม่ได้หรือ budget ที่ยังไม่อนุมัติให้ NOT VERIFIED/PENDING ห้ามประดิษฐ์ผลหรือถือว่า commit/push เท่ากับผ่านรีวิว ทำงานที่ไม่ติดขัดต่อจนจบ ไม่หยุดรอ Codex ราย milestone
 
-Codex อนุญาตให้เพิ่มส่วน sync Phase5 ใน PRD/TDD/API/CONTEXT เฉพาะรายการใน HANDOFF D-07 เท่านั้น ห้ามเพิ่ม feature/เปลี่ยน requirement เดิม/แก้ AGENTS หรือ CONVENTIONS ถ้าจำเป็นต้องเปลี่ยนเกินนี้ให้เสนอ diff และหยุดส่วนที่เกี่ยวข้อง ห้ามแก้สเปกหรือเกณฑ์เพื่อทำให้ผลผ่านย้อนหลัง
-
-implement พร้อมทดสอบจริงตาม gates G-01..G-13 แยก Static Inspection, Automated Tests, Studio Runtime และ Manual Visual; ห้ามใช้ Node simulation แทน Studio ห้ามสร้างผลทดสอบปลอม ไม่บังคับภาพ/วิดีโอ ค่า performance budget ที่ยังไม่อนุมัติและ visual ที่ยังไม่ได้ตรวจต้องคง NOT VERIFIED/PENDING ไม่กล่าวว่าผ่านหรือครบแล้ว
-
-ส่งมอบรวมครั้งเดียว: working-tree diff, base/current SHA, changed-path list, สถานะครบ 34 Task-ID, ผลคำสั่ง/cwd/exit/status, หลักฐาน runtime/visual/performance ที่มีจริง, canonical document changes พร้อมเหตุผลและ scope audit, known limitations/open decisions อัปเดต root TASKS.md เป็น READY_FOR_REVIEW เมื่อหลักฐานพร้อม หากยังมี blocker ให้ BLOCKED พร้อมงานที่เสร็จจริง ห้าม APPROVED/PASS/CLOSED หรือปิดงานเอง จากนั้นแจ้งให้ Codex รีวิวรวม ห้าม commit เองเพื่อสร้าง SHA
+ท้ายงานส่งครั้งเดียว: execution base/final SHA, รายการ M0..M5 พร้อม SHA/ผล push, สถานะครบ 34 Task-ID, changed-path list, คำสั่งทดสอบ/cwd/exit/status และ evidence จริง, การแก้เอกสารพร้อม scope audit, known limitations/open decisions อัปเดต root TASKS เป็น READY_FOR_REVIEW เมื่อครบ หรือ BLOCKED พร้อมเหตุจริง ห้าม APPROVED/PASS/CLOSED จากนั้นส่งให้ Codex รีวิวรวมที่ final SHA
 ```

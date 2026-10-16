@@ -8,7 +8,7 @@
 | [PLAN-0002](0002-anime-towers-and-combat/PLAN.md) | ระบบป้อมฮีโร่อนิเมะและการต่อสู้วิวัฒนาการ 4 ร่าง | `src/Track2_TowerSystem/` | `feat/track2-towers`<br>`../wt-track2-towers` | `34872` | Ready for Review |
 | [PLAN-0003](0003-infinite-upgrade-and-ui/PLAN.md) | ระบบ UI HUD และเซิร์ฟเวอร์อัปเกรดไร้ขีดจำกัด | `src/Track3_UpgradeServer/`<br>`src/Track3_UISystem/` | `feat/track3-ui`<br>`../wt-track3-ui` | `34873` | Ready for Review |
 | [PLAN-0004](0004-multi-track-integration-and-uat/PLAN.md) | การผสานรวม 3 Track และตรวจรับ Master UAT | ทั้งโปรเจกต์ | `main`<br>`./` | `34872` | Ready for Merge |
-| [PLAN-0005](0005-character-model-animation/PLAN.md) | Phase 5: Character Model, Signature Animation, VFX & Animation Lab (Codex วางแผน / AGY ยังไม่มอบหมาย) | Shared contracts, Track2, VisualBridge, DevTools และโมเดล 3 ตัวตาม scope ร่าง | ยังไม่สร้าง branch/worktree | ยังไม่จัดสรร | Implementation scope authorized — pending AGY start; Codex final review |
+| [PLAN-0005](0005-character-model-animation/PLAN.md) | Phase 5: Character Model, Signature Animation, VFX & Animation Lab (Codex วางแผน / AGY ยังไม่มอบหมาย) | Shared contracts, Track2, VisualBridge, DevTools และโมเดล 3 ตัวตาม scope ร่าง | ยังไม่สร้าง branch/worktree | ยังไม่จัดสรร | Implementation + milestone commit/push authorized — pending AGY start; single HANDOFF; Codex final review |
 
 ## แผนภาพลำดับการทำงาน (Dependency & Execution Flow)
 

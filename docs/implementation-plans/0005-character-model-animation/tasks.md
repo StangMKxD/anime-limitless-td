@@ -257,9 +257,9 @@
 
 - **ผู้รับผิดชอบที่เสนอ:** AGY-Core เสนอ / Codex review | **ก่อนเริ่ม:** P5-20..22; D-07 ขอบเขตเอกสารได้รับอนุญาต
 - **งาน/ส่งมอบ:** งานท้ายสุด: sync เอกสารที่อนุมัติตามผลงานจริง, root board/index references และ contract owner docs; ส่ง working-tree/base/current SHA, changed-path list, evidence; แก้ finding ใน scope ด้วย HANDOFF เดิม
-- **เกณฑ์ตรวจรับ:** Codex ตรวจ scope/spec drift ของทุก doc และ diff ณ ref ล่าสุด; stable F-ID ใน review-NNN; no unresolved blockers/stale SHA; Owner ตัดสินรับงานเอง ไม่มี autonomous commit/push/merge
+- **เกณฑ์ตรวจรับ:** Codex ตรวจ scope/spec drift ของทุก doc และ diff ณ ref ล่าสุด; stable F-ID ใน review-NNN; no unresolved blockers/stale SHA; Owner ตัดสินรับงานเอง; AGY commit/push ได้เฉพาะ milestones ที่ผู้ใช้อนุญาตตาม HANDOFF; ไม่ merge/deploy/ปิดงานเอง
 - **Traceability:** P5-R01..08 / G-13 และ final gate
 
 ## การส่งตรวจ/แก้ไขในอนาคต
 
-AGY ส่ง actual ref และ working-tree diff พร้อมผลแยก 4 ประเภท; Codex ลง verdict/findings ใน assets/review-NNN.md ต่อรอบ โดยคง F-ID เดิมสำหรับปัญหาเดิม AGY เขียน assets/fix-NNN.md เมื่อได้รับมอบหมายแก้ ใช้ HANDOFF เดิมสำหรับ in-scope correction ไม่มีการสร้างรายงานเหล่านี้ล่วงหน้า และไม่มีสิทธิ์ commit เพื่อสร้าง SHA tracking
+AGY ส่ง actual ref และ working-tree diff พร้อมผลแยก 4 ประเภท; Codex ลง verdict/findings ใน assets/review-NNN.md ต่อรอบ โดยคง F-ID เดิมสำหรับปัญหาเดิม AGY เขียน assets/fix-NNN.md เมื่อได้รับมอบหมายแก้ ใช้ HANDOFF เดิมสำหรับ in-scope correction ไม่มีการสร้างรายงานเหล่านี้ล่วงหน้า และใช้ milestone commit/push ที่ผู้ใช้อนุญาตตาม HANDOFF ล่าสุดเพื่อ SHA tracking; Codex ตรวจรวม final SHA

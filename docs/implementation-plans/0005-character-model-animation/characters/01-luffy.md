@@ -131,7 +131,7 @@
 - ทุก resource ต้องเข้า owner ledger; เรียก cleanup ซ้ำได้โดยไม่ double-count; passive aura ไม่ถูกสร้างซ้ำทุก frame/cue
 - การตรวจ joints ต้องเทียบ CFrame ชิ้นที่เห็นจริงหลัง engine step โดย root คงที่; เปลี่ยนค่า Motor6D.C0 อย่างเดียวไม่พิสูจน์ mobility
 - ตรวจครบ 8 states ตาม design, animation-only / VFX-only / combo, Low/Medium/High, 0.1x/1x/2x, seek ไปกลับ, reset ขณะกลางท่า และ destroy ระหว่าง VFX
-- ผลส่งมอบรายตัว: diff ตาม owned paths, actual ref/base, test command+exit, Studio runtime observations, visual checklist และ known limitations; ไม่มีสิทธิ์ commit หรือปิดงานเอง
+- ผลส่งมอบรายตัว: diff ตาม owned paths, actual ref/base, test command+exit, Studio runtime observations, visual checklist และ known limitations; อนุญาต commit+push เฉพาะ milestone ของตัวละครตาม HANDOFF ล่าสุด; ไม่มีสิทธิ์ปิดงานเอง
 - งานย่อยที่ใช้ส่งต่อคือ L-01..04 ใน [tasks](../tasks.md) ซึ่งระบุ dependency/AC ชัดกว่ารายการ Task เดิมด้านบน
 
 ## 9. Code blueprint ต้นทาง

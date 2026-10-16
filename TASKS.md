@@ -2,7 +2,7 @@
 
 > Governance Mode: Strict SoD | Controller: Codex | Implementer: User / Separate Agents
 > Handoff Status: PLANS_READY | Active Branch: main
-> Phase5: IMPLEMENTATION_SCOPE_AUTHORIZED / PENDING_AGY_START | Codex final review only | main เดิม; AGY ไม่มีสิทธิ์ commit/push/branch/worktree
+> Phase5: IMPLEMENTATION_SCOPE_AUTHORIZED / PENDING_AGY_START | Codex final review only | main เดิม; AGY commit+push ได้ราย milestone M0..M5; ไม่สร้าง branch/worktree
 
 ## Plans Breakdown
 
@@ -31,3 +31,5 @@
 - Verification: G-01..13 NOT VERIFIED; AGY internal gates แล้ว Codex ตรวจรวมตอนท้าย; missing evidence/budget ไม่ใช่ผ่าน
 - Scope/doc sync: ตาม HANDOFF Decision handling/D-07; protected paths คงเดิม; ไม่มีสิทธิ์ปิดงานเอง
 - User dirty state to protect: .vscode/; ห้าม reset unrelated work; ส่ง working-tree diff และ actual ref
+
+- Milestone Git authorization: ผู้ใช้ 2026-10-17 อนุญาต AGY commit + push origin/main ทุก M0..M5 ตาม HANDOFF; ไม่เท่ากับ review approval; final review ที่ final SHA
