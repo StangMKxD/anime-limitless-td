@@ -1,0 +1,314 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "manifestVersion": "1.0.0",
+  "title": "Anime Limitless Tower Defense — Phase 5 Verification & Test Manifest",
+  "description": "Comprehensive test runner manifest establishing baseline verification and Phase 5 test progression across Milestones M0-M5",
+  "generatedBy": "worker_m0_1",
+  "timestamp": "2026-10-16T18:33:00Z",
+  "executionBaseSha": "44026faf294e378207f231e2ced5832847e352be",
+  "targetBranch": "phase5/implementer-took-dev",
+
+  "baselineSuite": {
+    "suiteId": "PHASE3_FULL_SUITE",
+    "name": "Phase 3 Full Test Suite Runner (Tiers 1-4)",
+    "runnerCommand": "node tests/run_all_tests.mjs",
+    "workingDirectory": "C:/Users/btzza/anime-limitless-td",
+    "expectedExitCode": 0,
+    "totalTests": 44,
+    "requiredPassRate": 1.0,
+    "verifiedState": "VERIFIED_PASSING (44/44)",
+    "executionTimeMs": 18,
+    "invariantsProtected": [
+      "Zero initial tower state",
+      "Gacha summon & reroll probabilities (Myth:22%, Leg:56%, Epic:22%)",
+      "Tactical 8-pad placement, swap, and sell mechanics",
+      "Continuous idle bobbing [-0.35, +0.35] studs and 360-deg aura ring rotation",
+      "Combat range, cooldown, splash AoE, crit chance (clamped 0.95), and Whitebeard 0.45x slow",
+      "12 Roguelike wave card pool bonuses and base HP heal",
+      "Full match 15-wave progression with Kaido boss waves 5, 10, 15"
+    ]
+  },
+
+  "milestoneSuites": [
+    {
+      "milestone": "M0",
+      "suiteId": "M0_CONTRACTS_AND_BASELINE",
+      "name": "M0 Contracts, Asset Audit & Combat Oracle Baseline",
+      "tasks": ["P5-00", "P5-01", "P5-02", "P5-03", "P5-04", "P5-05", "P5-06"],
+      "runners": [
+        {
+          "type": "AutomatedTests",
+          "name": "Baseline E2E Test Suite",
+          "command": "node tests/run_all_tests.mjs",
+          "expectedTests": 44,
+          "expectedExitCode": 0
+        },
+        {
+          "type": "AutomatedTests",
+          "name": "Combat Oracle Timing Verification",
+          "command": "node tests/combat_oracle_verification.test.mjs",
+          "expectedTests": 22,
+          "expectedExitCode": 0
+        },
+        {
+          "type": "StaticInspection",
+          "name": "19-Model Asset Inventory Audit",
+          "command": "node .agents/teamwork/explorer_m0_3/audit_assets.mjs",
+          "expectedOutputArtifact": ".agents/teamwork/asset_inventory_audit.json",
+          "expectedExitCode": 0
+        },
+        {
+          "type": "StaticInspection",
+          "name": "Rojo Sourcemap Generation",
+          "command": "rojo sourcemap default.project.json",
+          "expectedExitCode": 0
+        }
+      ],
+      "gatesTargeted": ["G-01", "G-06", "G-11"]
+    },
+    {
+      "milestone": "M1",
+      "suiteId": "M1_CORE_AND_LAB",
+      "name": "M1 Core Runtime Engine & Animation Lab Verification",
+      "tasks": ["P5-07", "P5-08", "P5-09", "P5-10", "P5-11", "P5-12", "P5-13", "P5-14", "P5-15", "P5-16", "P5-17"],
+      "specFiles": ["tests/phase5_core_and_lab.spec.luau"],
+      "runners": [
+        {
+          "type": "AutomatedTests",
+          "name": "Regression Baseline Check",
+          "command": "node tests/run_all_tests.mjs",
+          "expectedTests": 44,
+          "expectedExitCode": 0
+        },
+        {
+          "type": "AutomatedTests",
+          "name": "Core & Lab Spec Suite",
+          "testFile": "tests/phase5_core_and_lab.spec.luau",
+          "keyChecks": [
+            "Single visual ownership: VisualBridge skips Track2RigOwned models",
+            "Idempotent semantic RigBuilder: unanchored child parts, massless, non-colliding",
+            "Deterministic procedural player: zero drift on pause/seek/replay/speed",
+            "VFXDispatcher: owner ledger cleanup, quality preset caps (Low/Med/High)",
+            "Combat decoupling: visual toggle/error does not affect 0.31s damage timer",
+            "Studio-only guard: RunService:IsStudio() halts production execution",
+            "Model validator: 19 assets categorized, map models marked 'N/A (Static Map Asset)'",
+            "Stress test telemetry: 1/10/25/50 character load and memory leak check"
+          ]
+        }
+      ],
+      "gatesTargeted": ["G-01", "G-02", "G-04", "G-05", "G-06", "G-07", "G-08", "G-09", "G-10"]
+    },
+    {
+      "milestone": "M2",
+      "suiteId": "M2_LUFFY_GEAR5",
+      "name": "M2 Luffy Gear 5 Signature Animation & VFX Verification",
+      "tasks": ["L-01", "L-02", "L-03", "L-04"],
+      "specFiles": ["tests/characters/luffy_anim_vfx.spec.luau"],
+      "runners": [
+        {
+          "type": "AutomatedTests",
+          "name": "Regression Baseline Check",
+          "command": "node tests/run_all_tests.mjs",
+          "expectedTests": 44,
+          "expectedExitCode": 0
+        },
+        {
+          "type": "AutomatedTests",
+          "name": "Luffy Signature Spec",
+          "testFile": "tests/characters/luffy_anim_vfx.spec.luau",
+          "keyChecks": [
+            "Preserves all 122 BaseParts in Luffy.rbxmx",
+            "6-joint semantic rig controls multi-part arm (UpperArm, Forearm, Fist, Knuckles)",
+            "8 animation states: Idle, SpecialIdle, Spawn, Windup, Attack, Impact, Recovery, Ultimate",
+            "Rubber arm stretch with shoulder pivot compensation and elastic snap-back (delta < 0.001)",
+            "Gear 5 VFX: cloud aura, black-red Conqueror Haki lightning, sonic rings, Bajrang Fist",
+            "Resource ledger 100% cleanup upon reset or destroy"
+          ]
+        }
+      ],
+      "gatesTargeted": ["G-01", "G-02", "G-03", "G-04", "G-05", "G-07"]
+    },
+    {
+      "milestone": "M3",
+      "suiteId": "M3_ZORO_KING_OF_HELL",
+      "name": "M3 Zoro King of Hell Signature Animation & VFX Verification",
+      "tasks": ["Z-01", "Z-02", "Z-03", "Z-04"],
+      "specFiles": ["tests/characters/zoro_anim_vfx.spec.luau"],
+      "runners": [
+        {
+          "type": "AutomatedTests",
+          "name": "Regression Baseline Check",
+          "command": "node tests/run_all_tests.mjs",
+          "expectedTests": 44,
+          "expectedExitCode": 0
+        },
+        {
+          "type": "AutomatedTests",
+          "name": "Zoro Signature Spec",
+          "testFile": "tests/characters/zoro_anim_vfx.spec.luau",
+          "keyChecks": [
+            "Preserves all 139 BaseParts in Zoro.rbxmx",
+            "9-joint weapon rig: RootJoint, Neck, shoulders, hips, WeaponRight (Enma), WeaponLeft (Sandai), WeaponMouth (Wado)",
+            "3 hip scabbards welded to Torso",
+            "8 animation states: Santoryu guard, Enma tame, 3-sword unsheathe, Oni Giri, King of Hell cross-slash, 103 Mercies",
+            "3-sword trail generation with mandatory Trail.Enabled = false upon attack stop/cancel",
+            "Emerald/purple Haki flame VFX tracked in ledger with zero orphan instances"
+          ]
+        }
+      ],
+      "gatesTargeted": ["G-01", "G-02", "G-03", "G-04", "G-05", "G-07"]
+    },
+    {
+      "milestone": "M4",
+      "suiteId": "M4_ACE_FLAME_EMPEROR",
+      "name": "M4 Ace Flame Emperor Signature Animation & VFX Verification",
+      "tasks": ["A-01", "A-02", "A-03", "A-04"],
+      "specFiles": ["tests/characters/ace_anim_vfx.spec.luau"],
+      "runners": [
+        {
+          "type": "AutomatedTests",
+          "name": "Regression Baseline Check",
+          "command": "node tests/run_all_tests.mjs",
+          "expectedTests": 44,
+          "expectedExitCode": 0
+        },
+        {
+          "type": "AutomatedTests",
+          "name": "Ace Signature Spec",
+          "testFile": "tests/characters/ace_anim_vfx.spec.luau",
+          "keyChecks": [
+            "Preserves all 128 BaseParts in Ace.rbxmx",
+            "6-joint rig with accessories: CowboyHat welded to Head, beads and hip dagger to Torso",
+            "8 animation states: flame finger ignition, hat tip, fire pillar spawn, Hiken thrust, Dai Enkai: Entei",
+            "Entei sunball spawned above raised right hand (OverheadEnteiAtt)",
+            "Mera Mera flame VFX, beam connections, and scorch rings tracked with TTL",
+            "Light emission scaled to quality presets (Low/Med/High) with zero memory leaks"
+          ]
+        }
+      ],
+      "gatesTargeted": ["G-01", "G-02", "G-03", "G-04", "G-05", "G-07"]
+    },
+    {
+      "milestone": "M5",
+      "suiteId": "M5_INTEGRATION_AND_DOCS",
+      "name": "M5 Full Integration, Stress Suite, Regression & Doc Sync",
+      "tasks": ["P5-20", "P5-21", "P5-22", "P5-23"],
+      "specFiles": ["tests/phase5_integration.spec.luau"],
+      "runners": [
+        {
+          "type": "AutomatedTests",
+          "name": "Full Regression Suite",
+          "command": "node tests/run_all_tests.mjs",
+          "expectedTests": 44,
+          "expectedExitCode": 0
+        },
+        {
+          "type": "AutomatedTests",
+          "name": "Phase 5 Coexistence & Integration Spec",
+          "testFile": "tests/phase5_integration.spec.luau",
+          "keyChecks": [
+            "Coexistence of 3 signature heroes + 9 legacy heroes + 4 enemies + 3 map assets without state collision",
+            "19 assets successfully loaded through ModelValidator",
+            "Stress benchmark 1/10/25/50 active characters with frame-time profiling",
+            "Zero orphan instance leak after cleanup across all 19 models"
+          ]
+        }
+      ],
+      "gatesTargeted": ["G-01", "G-02", "G-03", "G-04", "G-05", "G-06", "G-07", "G-08", "G-09", "G-10", "G-11", "G-12", "G-13"]
+    }
+  ],
+
+  "gatesVerificationMap": {
+    "G-01": {
+      "name": "19 Assets Load & Classification",
+      "requirement": "Load, clone, and inspect all 19 assets (12 heroes, 4 enemies, 3 map assets) with accurate fallback",
+      "verificationMethod": "AutomatedTests / StaticInspection",
+      "evidenceSource": ".agents/teamwork/asset_inventory_audit.json + ModelValidator.luau",
+      "passCriteria": "All 19 models exist, have valid BasePart counts (1676 total), map models marked N/A"
+    },
+    "G-02": {
+      "name": "Joint & Visible Limb Mobility",
+      "requirement": "Expected semantic joints (6 or 9) move visible limbs and weapons in World CFrame after engine step with zero rigid lock",
+      "verificationMethod": "AutomatedTests (Node / Luau Spec)",
+      "evidenceSource": "tests/phase5_core_and_lab.spec.luau",
+      "passCriteria": "Children parts unanchored, Motor6D C0 updates produce non-zero world CFrame delta on limb parts"
+    },
+    "G-03": {
+      "name": "Accessory Attachment Invariants",
+      "requirement": "Accessories (Straw Hat, 3 swords, Cowboy Hat, beads) follow parent limb across all 8 states",
+      "verificationMethod": "AutomatedTests (Character Specs)",
+      "evidenceSource": "tests/characters/*.spec.luau",
+      "passCriteria": "WeldConstraint/Attachment positions maintain relative offset to parent bone < 0.001"
+    },
+    "G-04": {
+      "name": "Deterministic Transport Controls",
+      "requirement": "Pause, seek, cancel, reset, scale, and replay restore exact rest pose with zero cumulative drift",
+      "verificationMethod": "AutomatedTests",
+      "evidenceSource": "tests/phase5_core_and_lab.spec.luau",
+      "passCriteria": "delta < 0.001 between initial rest pose snapshot and post-scrub reset pose"
+    },
+    "G-05": {
+      "name": "VFX Cue & Layer Quality",
+      "requirement": "VFX cues fire at proper positions, layer toggles respected, quality caps enforced, seek does not re-emit cues",
+      "verificationMethod": "AutomatedTests / StudioRuntime",
+      "evidenceSource": "VFXDispatcher telemetry",
+      "passCriteria": "Instance caps (Low:8, Med:16, High:30) never exceeded, zero duplicate cues on scrub"
+    },
+    "G-06": {
+      "name": "Combat Oracle Invariance",
+      "requirement": "0.31s nominal hit timing, damage cadence, RNG, armor, splash, slow, and sell semantics never altered by visual errors or toggles",
+      "verificationMethod": "AutomatedTests",
+      "evidenceSource": "tests/combat_oracle_verification.test.mjs",
+      "passCriteria": "Independent server timer fires damage at t = 0.31s regardless of visual state, sell cancels pending hit"
+    },
+    "G-07": {
+      "name": "Resource Ledger 100% Cleanup",
+      "requirement": "Destroy, sell, reset, or close leaves zero orphaned instances, tweens, tasks, or connections; ledger equals subtree count",
+      "verificationMethod": "AutomatedTests",
+      "evidenceSource": "tests/phase5_core_and_lab.spec.luau",
+      "passCriteria": "Active tracked instances = 0 and workspace container child count = 0 after cleanupAllForModel"
+    },
+    "G-08": {
+      "name": "Sandbox & Production Isolation",
+      "requirement": "Animation Lab sandbox and production guard never alter gameplay, economy, wave progress, or player rewards",
+      "verificationMethod": "AutomatedTests",
+      "evidenceSource": "tests/phase5_core_and_lab.spec.luau",
+      "passCriteria": "RunService:IsStudio() guards all remotes/UI; dummy targets do not register with WaveManager"
+    },
+    "G-09": {
+      "name": "Multi-Character Coexistence",
+      "requirement": "Mixed characters (Luffy, Zoro, Ace + 16 legacy) do not collide or overwrite RigContext or VFXExecutionContext",
+      "verificationMethod": "AutomatedTests",
+      "evidenceSource": "tests/phase5_integration.spec.luau",
+      "passCriteria": "Concurrent execution of 19 instances operates independently without shared state corruption"
+    },
+    "G-10": {
+      "name": "Stress & Telemetry Benchmarks",
+      "requirement": "Measured stress testing at 1, 10, 25, and 50 active characters with documented hardware, frame time, and memory",
+      "verificationMethod": "StudioRuntime / AutomatedTests",
+      "evidenceSource": "docs/implementation-plans/0005-character-model-animation/notes.md",
+      "passCriteria": "Empirical metrics recorded with device/build/quality; pending budgets truthfully flagged"
+    },
+    "G-11": {
+      "name": "Full Regression Suite Pass",
+      "requirement": "Existing Phase 1-4 tests (node tests/run_all_tests.mjs) pass 44/44 without degradation or reduced assertions",
+      "verificationMethod": "AutomatedTests",
+      "evidenceSource": "node tests/run_all_tests.mjs",
+      "passCriteria": "Exit code 0, 44/44 tests passing (100%), duration < 100ms"
+    },
+    "G-12": {
+      "name": "Interactive Studio GUI Acceptance",
+      "requirement": "Visual acceptance of Luffy, Zoro, Ace, and Animation Lab UI in interactive Roblox Studio",
+      "verificationMethod": "ManualVisual / StudioRuntime",
+      "evidenceSource": "Roblox Studio Session",
+      "passCriteria": "If run headless without interactive Studio GUI, truthfully record as NOT VERIFIED (Awaiting Interactive Studio GUI Inspection)"
+    },
+    "G-13": {
+      "name": "Scope & Documentation Compliance",
+      "requirement": "Final diff and all documentation changes strictly within approved Phase 5 boundaries with zero scope drift",
+      "verificationMethod": "StaticInspection",
+      "evidenceSource": "git diff --name-status & doc sync audit",
+      "passCriteria": "Protected paths (AGENTS.md, CONVENTIONS.md, GameConfig.luau, Track1, Track3) untouched in git history"
+    }
+  }
+}

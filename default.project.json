@@ -15,7 +15,10 @@
                                                            },
                                            "MapModels":  {
                                                              "$path":  "assets/rojo/MapModels"
-                                                         }
+                                                         },
+                                           "DevTools":  {
+                                                            "$path":  "src/DevTools"
+                                                        }
                                        },
                  "ServerScriptService":  {
                                              "$className":  "ServerScriptService",

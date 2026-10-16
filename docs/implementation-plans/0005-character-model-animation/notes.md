@@ -58,3 +58,21 @@ Static file/XML/Git: inspected ตามรายการข้างต้น;
 - **N-12 [CONFIRMED]:** ผู้ใช้สั่ง “commit +push เลย” สำหรับชุดเอกสารในรอบนี้; ภายหลังผู้ใช้อนุญาต AGY commit+push implementation ทุก milestone M0..M5 ตาม HANDOFF ล่าสุด ข้อห้ามเดิมถูกแทนที่เฉพาะ scope นี้
 
 - **N-13 [CONFIRMED]:** ผู้ใช้ 2026-10-17 ขอ prompt/เอกสารสั่งงานใบเดียว และอนุญาต AGY commit+push ราย milestone; HANDOFF เป็นสัญญาหลักเดียว M0..M5, final independent review โดย Codex ยังไม่เกิด
+
+## Milestone M0 Completion Notes (`P5-00`..`P5-06`)
+
+- **Status**: [READY_FOR_REVIEW] (Internal Gate: PASS)
+- **Active Branch**: `phase5/implementer-took-dev`
+- **Execution Base SHA**: `44026faf294e378207f231e2ced5832847e352be`
+- **Deliverables Completed & Locked**:
+  - `P5-00`: Verified HEAD SHA (`44026fa`), git status, and completed XML inventory audit of all 19 `.rbxmx` models into `.agents/teamwork/asset_inventory_audit.json`.
+  - `P5-01`: Additive documentation synchronization for Phase 5 scope in `docs/requirements/PRD.md`, `docs/technical/TDD.md`, `docs/technical/API.md`, and `docs/CONTEXT.md`.
+  - `P5-02`: Locked Combat Oracle kinematics and 0.31s nominal impact timing (`0.14s + 0.10s + 0.07s`) in `src/Track2_TowerSystem/TowerController.server.luau`; verified 100% via `tests/combat_oracle_verification.test.mjs` (22/22 tests passed).
+  - `P5-03`: Created and locked shared animation contract `src/Shared/AnimationContract.luau` with 8 states, 6+3 semantic joints, rest-pose snapshot schema, and multi-part limb bindings.
+  - `P5-04`: Created and locked shared VFX contract `src/Shared/VFXContract.luau` with cues, quality presets (`Low`, `Medium`, `High`), layer toggles, intensity scaling, and resource ledger interface.
+  - `P5-05`: Configured Rojo DevTools mapping in `default.project.json` and created `src/DevTools/init.luau` with Studio guard design.
+  - `P5-06`: Verified test suite baseline (`node tests/run_all_tests.mjs`: 44/44 passed) and established Phase 5 test manifest `tests/manifest_phase5.json`.
+- **Verification Evidence**:
+  - `node tests/run_all_tests.mjs`: 44 / 44 PASSED (100.0%)
+  - `node tests/combat_oracle_verification.test.mjs`: 22 / 22 PASSED (100.0%)
+  - Internal Gate Status: PASS (worker_m0_1, reviewer_m0_1, reviewer_m0_2, challenger_m0_1, challenger_m0_2, auditor_m0_1 all APPROVED/CLEAN)
