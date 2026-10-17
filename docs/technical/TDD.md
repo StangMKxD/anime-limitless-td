@@ -173,3 +173,41 @@ flowchart TD
   - หุ่นทดสอบจำลอง (Dummy Target) ติดตั้ง Attribute `IsAnimationLabDummy = true` โดยไม่ถูกเพิ่มเข้าโฟลเดอร์ `Workspace.ActiveEnemies` และไม่มีการผูกเข้ากับระบบเงินรางวัลของ `WaveManager`
 - **การคืนค่าสภาพแวดล้อมสมบูรณ์ (State & Camera Restoration)**:
   - เมื่อเปิดใช้งาน Lab ระบบจะบันทึกสถานะกล้องเดิม (`CameraType`, `CFrame`, `FieldOfView`) และเมื่อปิด Lab จะคืนค่ากล้องและทำลาย Instance ทั้งหมดบน Sandbox ทันที
+
+### 4.5 สถาปัตยกรรมการทดสอบความเค้นและมาตรวัดแบบเรียลไทม์ (Stress Benchmark & Telemetry Engine — P5-22)
+
+```mermaid
+flowchart TD
+    subgraph StressRunnerSubsystem ["StressTestRunner Subsystem"]
+        SR["StressTestRunner.luau"]
+        TC["TelemetryCollector.luau"]
+        LC["LabConfig.STRESS_BUDGETS"]
+        SM["SandboxStageManager.luau"]
+    end
+
+    subgraph ConcurrentLoad ["Concurrent Stress Loads (1, 10, 25, 50 Units)"]
+        U1["Single (1 Unit / Luffy 122 Parts)"]
+        U10["Chars10 (10 Mixed Units)"]
+        U25["Chars25 (25 Mixed Units)"]
+        U50["Chars50 (50 Mixed Units)"]
+    end
+
+    subgraph TeardownBarrier ["Zero-Leak Teardown & Ledger Audit"]
+        VFX_CLEAN["VFXDispatcher.cleanupAllForModel()"]
+        CTX_CLEAN["AnimationController.DestroyContext()"]
+        DESTROY["Instance:Destroy()"]
+        AUDIT["createdCount - cleanedCount == 0\nactiveCount == 0\ntrackedInstances == 0"]
+    end
+
+    SR --> LC
+    SR --> SM
+    SR --> TC
+    SM --> ConcurrentLoad
+    ConcurrentLoad --> TeardownBarrier
+    TeardownBarrier --> AUDIT
+```
+
+- **กลไกการกระจายโหลดและการวัดเวลา (Timing & Telemetry Sampling)**:
+  - ระบบจัดวางโมเดลแบบตารางกริดบน Sandbox Stage (ระยะห่างระหว่างจุด 4.5 Studs)
+  - วัด Frame Time จริง และคำนวณ P95 Frame Time ตลอดรอบการประมวลผล
+  - สแกนโครงสร้าง Subtree จริงเปรียบเทียบกับ Resource Ledger ใน `VFXDispatcher` เพื่อยืนยันว่าไม่มี Instance หรือ Connection ตกค้าง

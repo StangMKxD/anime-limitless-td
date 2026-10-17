@@ -174,3 +174,48 @@ export type VFXContext = {
   - `TriggerVFX(cue: VFXCue, quality: QualityPreset, layers: LayerFlags)`: สั่งยิงเอฟเฟกต์ภาพ
   - `RunStressTest(characterCount: number)`: สั่งทดสอบความเค้น (1, 10, 25, 50 ตัวละคร)
   - `CleanupSandbox()`: สั่งล้างข้อมูลและวัตถุทั้งหมดบน Sandbox Stage
+
+---
+
+## 6. สัญญามาตรวัดและระบบทดสอบความเค้น (Stress Benchmark & Telemetry API)
+อ้างอิงจาก [`src/DevTools/AnimationLab/StressTestRunner.luau`](../../src/DevTools/AnimationLab/StressTestRunner.luau) และ [`src/DevTools/AnimationLab/TelemetryCollector.luau`](../../src/DevTools/AnimationLab/TelemetryCollector.luau)
+
+### ชนิดข้อมูลผลลัพธ์ความเค้น (StressResult & TelemetrySnapshot)
+```luau
+export type StressResult = {
+    scenario: "Single" | "Chars10" | "Chars25" | "Chars50",
+    characterCount: number,
+    peakParts: number,
+    peakVFXInstances: number,
+    avgFrameTimeMs: number,
+    peakFrameTimeMs: number,
+    p95FrameTimeMs: number,
+    remainingSandboxInstances: number,
+    isLeakFree: boolean,
+    passed: boolean,
+    notes: string,
+}
+
+export type TelemetrySnapshot = {
+    modelName: string,
+    basePartCount: number,
+    activeMotorCount: number,
+    activeWeldCount: number,
+    emitterCount: number,
+    activeVFXInstances: number,
+    trackedTweens: number,
+    createdCount: number,
+    cleanedCount: number,
+    leakDelta: number,
+    frameTimeMs: number,
+    fps: number,
+}
+```
+
+### งบประมาณความเค้นมาตรฐาน (Authoritative Stress Budgets)
+| Tier | Units | Max Active Parts | Max Active VFX | Target Frame Time | Required Leak Balance |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| `Single` | 1 | 160 | 30 | 16.67ms (60 FPS) | 0 |
+| `Chars10` | 10 | 1,600 | 200 | 16.67ms (60 FPS) | 0 |
+| `Chars25` | 25 | 3,800 | 400 | 20.00ms (>= 50 FPS) | 0 |
+| `Chars50` | 50 | 7,500 | 600 | 25.00ms (>= 40 FPS) | 0 |

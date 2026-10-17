@@ -104,3 +104,17 @@
   - **Zoro King of Hell**: ท่าเตรียม 3 ดาบ Santoryu, ท่าไขว้ดาบ Oni Giri, เพลิงนรก King of Hell เปลวไฟมรกต-ม่วงทอง, รอยลากดาบ 3 เส้น (Three-Sword Trails) และคลื่นดาบ 103 Mercies
   - **Ace Flame Emperor**: ท่าจุดไฟปลายนิ้ว, ท่าชาร์จหมัดเพลิง Hiken, เสาเพลิง, และดวงอาทิตย์เพลิงยักษ์ Dai Enkai: Entei เหนือมือขวา
 - โมเดลอีก 16 รายการที่เหลือ (9 Heroes, 4 Enemies, 3 Map Assets) ทำงานผ่าน `_FallbackProfile` และ `_FallbackVFX` อย่างเสถียร
+
+### ส่วนขยายระยะที่ 5: การตรวจรับความเค้นและตารางหลักฐาน 13 ข้อ (Phase 5 Milestone M5 Verification & Stress Acceptance)
+
+#### P5-R09: การทดสอบประสิทธิภาพตามเกณฑ์มาตรฐาน (Empirical Stress Benchmark)
+- วัดผลจริงภายใต้สภาวะการจำลองตัวละครแบบพร้อมกัน (Concurrent Units) 4 ระดับ:
+  - **1 ตัวละคร (Single)**: BaseParts <= 160, Active VFX <= 30, Frame Time <= 16.67ms (60 FPS), Leak Count = 0
+  - **10 ตัวละคร (Chars10)**: BaseParts <= 1,600, Active VFX <= 200, Frame Time <= 16.67ms (60 FPS), Leak Count = 0
+  - **25 ตัวละคร (Chars25)**: BaseParts <= 3,800, Active VFX <= 400, Frame Time <= 20.00ms (>= 50 FPS), Leak Count = 0
+  - **50 ตัวละคร (Chars50)**: BaseParts <= 7,500, Active VFX <= 600, Frame Time <= 25.00ms (>= 40 FPS), Leak Count = 0
+- รับประกันการคืนค่า Rest Pose Snapshot อย่างแม่นยำด้วยค่าความคลาดเคลื่อนสะสม `delta < 0.001` Studs หลังการข้ามเวลาหรือยกเลิกแอนิเมชันมากกว่า 50 ครั้ง
+
+#### P5-R10: เกณฑ์การตรวจรับความปลอดภัย 13 ข้อ (Authoritative 13 Gates Barrier)
+- ทุกผลลัพธ์การตรวจสอบต้องจำแนกหมวดหมู่อย่างโปร่งใส 4 ประเภท (`StaticInspection`, `AutomatedTests`, `StudioRuntime`, `ManualVisual`)
+- รายการที่ไม่สามารถตรวจด้วยโค้ดอัตโนมัติหรือต้องสังเกตด้วยสายตาบน Roblox Studio GUI ต้องระบุสถานะตามจริงเป็น `NOT VERIFIED (Awaiting Interactive Studio GUI Inspection)` โดยห้ามประดิษฐ์ผลลัพธ์หรือทึกทักเอาเองตามกฎ R01

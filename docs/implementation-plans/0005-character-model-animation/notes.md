@@ -163,3 +163,41 @@ Static file/XML/Git: inspected ตามรายการข้างต้น;
   - `lune run tests/characters/ace_anim_vfx.spec`: 33 / 33 PASSED (100.0%)
   - `rojo sourcemap default.project.json`: Exit code 0 (JSON valid)
   - Internal Gate Status: PASS (worker_m4_1, reviewer_m4_1, reviewer_m4_2, challenger_m4_1, challenger_m4_2, auditor_m4_1 all APPROVED/CLEAN)
+
+## Milestone M5 Completion Notes (`P5-20`..`P5-23`)
+
+- **Status**: [READY_FOR_REVIEW] (Internal Gate: PASS)
+- **Active Branch**: `phase5/implementer-took-dev`
+- **Execution Base SHA**: `44026faf294e378207f231e2ced5832847e352be`
+- **Deliverables Completed & Locked**:
+  - `P5-20`: Coexistence of 3 Signature Characters (Luffy, Zoro, Ace) + 16 Legacy Assets (9 Heroes, 4 Enemies, 3 Map Assets) verified without context collisions in `tests/phase5_coexistence.spec.luau`.
+  - `P5-21`: Master Regression & Test Runner Integration verified via `tests/phase5_integration.spec.luau` and `tests/run_all_tests.mjs` with 100% pass across all 4 tracks.
+  - `P5-22`: Measured Stress Benchmark Suite (`1 / 10 / 25 / 50` Units) and 13 Gates Evidence Table (`G-01`..`G-13`) established in `tests/phase5_stress_benchmark.spec.luau`.
+  - `P5-23`: Purely additive canonical documentation synchronization across PRD, TDD, API, CONTEXT, notes.md, and single-board TASKS.md (status `[READY_FOR_REVIEW]`, <= 70 lines).
+- **Authoritative 13 Gates Evidence Table (`G-01` .. `G-13`)**:
+  - `G-01` (Model Geometry Preservation): VERIFIED (StaticInspection & AutomatedTests)
+  - `G-02` (Dynamic Joint Construction): VERIFIED (AutomatedTests) / NOT VERIFIED (Awaiting Interactive Studio GUI Inspection)
+  - `G-03` (Accessory & Weapon Kinematics): VERIFIED (AutomatedTests) / NOT VERIFIED (Awaiting Interactive Studio GUI Inspection)
+  - `G-04` (Procedural Animation Restitution): VERIFIED (AutomatedTests - delta < 0.001)
+  - `G-05` (VFX Budget Enforcement): VERIFIED (AutomatedTests - Low<=8, Med<=16, High<=30) / NOT VERIFIED (Awaiting Interactive Studio GUI Inspection)
+  - `G-06` (Visual Decoupling & Combat Invariance): VERIFIED (AutomatedTests - 0.31s nominal timing invariant)
+  - `G-07` (Memory Leak Prevention & Resource Ledger): VERIFIED (AutomatedTests - 100% cleanup, 0 leak balance)
+  - `G-08` (Sandbox Isolation & Production Guard): VERIFIED (AutomatedTests - Y=5000 stage, RunService:IsStudio guard)
+  - `G-09` (Multi-Character Coexistence): VERIFIED (AutomatedTests) / NOT VERIFIED (Awaiting Interactive Studio GUI Inspection)
+  - `G-10` (Measured Stress Benchmark): VERIFIED (AutomatedTests - 1/10/25/50 units) / NOT VERIFIED (Awaiting Interactive Studio GUI Inspection)
+  - `G-11` (Full Project Regression Safety): VERIFIED (AutomatedTests - exit code 0)
+  - `G-12` (Studio Runtime & Interactive Visuals): NOT VERIFIED (Awaiting Interactive Studio GUI Inspection)
+  - `G-13` (Scope Lock & Canonical Docs Sync): VERIFIED (StaticInspection - Rule D-07, zero deletions)
+- **Verification Evidence**:
+  - `node tests/run_all_tests.mjs`: 51 / 51 PASSED (100.0%)
+  - `node tests/combat_oracle_verification.test.mjs`: 22 / 22 PASSED (100.0%)
+  - `node tests/phase5_core_and_lab.test.mjs`: 82 / 82 PASSED (100.0%)
+  - `lune run tests/phase5_core_and_lab.spec`: 21 / 21 PASSED (100.0%)
+  - `lune run tests/characters/luffy_anim_vfx.spec`: 29 / 29 PASSED (100.0%)
+  - `lune run tests/characters/zoro_anim_vfx.spec`: 31 / 31 PASSED (100.0%)
+  - `lune run tests/characters/ace_anim_vfx.spec`: 33 / 33 PASSED (100.0%)
+  - `lune run tests/phase5_coexistence.spec`: 13 / 13 PASSED (100.0%)
+  - `lune run tests/phase5_integration.spec`: 21 / 21 PASSED (100.0%)
+  - `lune run tests/phase5_stress_benchmark.spec`: 8 / 8 PASSED (100.0%)
+  - `rojo sourcemap default.project.json`: Exit code 0 (JSON valid)
+  - Internal Gate Status: PASS (worker_m5_1, ready for Codex final review)
