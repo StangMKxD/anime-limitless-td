@@ -325,6 +325,25 @@ function AnimationController.SanitizeAndRigModel(
 		getOrCreatePartAttachment(sandaiTip, "BladeTip", CFrame.new(0, 0.408, 0))
 	end
 
+	-- Ace Semantic Attachments (Tasks A-01 & A-03)
+	getOrCreateAttachment(model, rightFist, "RightFingerAttachment", CFrame.new(0, -0.28, -0.15))
+	getOrCreateAttachment(model, rightFist, "RightHandFlameAtt", CFrame.new(0, -0.28, -0.15))
+	getOrCreateAttachment(model, leftFist, "LeftHandAttachment", CFrame.new(0, -0.28, -0.15))
+	getOrCreateAttachment(model, leftFist, "LeftHandFlameAtt", CFrame.new(0, -0.28, -0.15))
+	getOrCreateAttachment(model, torso, "FlameAuraAttachment", CFrame.new(0, 0.95, 0.0))
+	getOrCreateAttachment(model, torso, "EnteiAnchorAttachment", CFrame.new(0.60, 5.80, -0.40))
+	getOrCreateAttachment(model, torso, "OverheadEnteiAtt", CFrame.new(0.60, 5.80, -0.40))
+
+	-- Hat Tip Attachment (prefer AceHatBrim, fallback to Head)
+	local aceHatBrim = model:FindFirstChild("AceHatBrim", true)
+		or model:FindFirstChild("CowboyHat_Brim", true)
+		or model:FindFirstChild("HatBrim", true)
+	if aceHatBrim and aceHatBrim:IsA("BasePart") then
+		getOrCreatePartAttachment(aceHatBrim, "HatTipAttachment", CFrame.new(0, 0, -1.25))
+	else
+		getOrCreateAttachment(model, head, "HatTipAttachment", CFrame.new(0, 0.94, -1.25))
+	end
+
 	-- 4. Dynamic Accessory & Sub-part Clustering (Anti-Lock Rigid Weld Protocol)
 	local limbCounts: { [string]: number } = {
 		Torso = 0,
@@ -376,9 +395,17 @@ function AnimationController.SanitizeAndRigModel(
 				targetLimb = torso
 				limbCounts.Torso += 1
 
-			-- 1.6 Zoro Floor / Ground Aura Parts (Task Z-01: bind to root so they stay horizontal on floor)
-			elseif string.find(pName, "HakiGround") or string.find(pName, "AuraBurst") or string.find(pName, "HakiLightning") then
+			-- 1.6 Floor / Ground Aura Parts (Ace + Zoro: bind to root so they stay horizontal on floor)
+			elseif string.find(pName, "HakiGround") or string.find(pName, "FlameGround") or string.find(pName, "GroundRing")
+				or string.find(pName, "AuraBurst") or string.find(pName, "HakiLightning") or string.find(pName, "FlameGroundRing") then
 				targetLimb = root
+				limbCounts.Torso += 1
+
+			-- 1.7 Ace Torso Accessories: Red Bead Necklace, Belt, Hip Dagger (Task A-01)
+			elseif string.find(pName, "RedNeckBead") or string.find(pName, "RedBead") or string.find(pName, "Necklace")
+				or string.find(pName, "Dagger") or string.find(pName, "Holster")
+				or string.find(pName, "AceBelt") or string.find(pName, "BeltBuckle") then
+				targetLimb = torso
 				limbCounts.Torso += 1
 
 			-- 2. Explicit Arm overrides: Haki glow, knuckles, shoulder caps (Spatial X routing)
@@ -394,11 +421,24 @@ function AnimationController.SanitizeAndRigModel(
 					limbCounts.LeftArm += 1
 				end
 
-			-- 3. Head & Face features
+			-- 2.5 Ace Arm Accessories: Elbow Guard / Pad & Log Pose (Task A-01)
+			elseif string.find(pName, "LogPose") then
+				targetLimb = leftArm
+				limbCounts.LeftArm += 1
+			elseif string.find(pName, "Elbow") or string.find(pName, "ArmBand") then
+				if relX > 0.2 then
+					targetLimb = rightArm
+					limbCounts.RightArm += 1
+				else
+					targetLimb = leftArm
+					limbCounts.LeftArm += 1
+				end
+
+			-- 3. Head & Face features (Including Freckle, CowboyHat, AceHat)
 			elseif string.find(pName, "HeadTopBevel") or string.find(pName, "Smile")
-				or string.find(pName, "Hair") or string.find(pName, "Hat") or string.find(pName, "Eye")
-				or string.find(pName, "Ear") or string.find(pName, "Nose") or string.find(pName, "Mouth")
-				or string.find(pName, "Jaw") or string.find(pName, "Teeth")
+				or string.find(pName, "Hair") or string.find(pName, "Hat") or string.find(pName, "CowboyHat") or string.find(pName, "AceHat")
+				or string.find(pName, "Eye") or string.find(pName, "Ear") or string.find(pName, "Nose") or string.find(pName, "Mouth")
+				or string.find(pName, "Jaw") or string.find(pName, "Teeth") or string.find(pName, "Freckle")
 				or (string.find(pName, "Scar") and not string.find(pName, "Chest"))
 				or string.find(pName, "Bandana") or string.find(pName, "Antler")
 				or (string.find(pName, "Cap") and not string.find(pName, "Shoulder"))

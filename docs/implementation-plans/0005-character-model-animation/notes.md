@@ -142,3 +142,24 @@ Static file/XML/Git: inspected ตามรายการข้างต้น;
   - `lune run tests/characters/zoro_anim_vfx.spec`: 31 / 31 PASSED (100.0%)
   - `rojo sourcemap default.project.json`: Exit code 0 (JSON valid)
   - Internal Gate Status: PASS (worker_m3_1, reviewer_m3_1, reviewer_m3_2, challenger_m3_1, challenger_m3_2, auditor_m3_1 all APPROVED/CLEAN)
+
+## Milestone M4 Completion Notes (`A-01`..`A-04`)
+
+- **Status**: [READY_FOR_REVIEW] (Internal Gate: PASS)
+- **Active Branch**: `phase5/implementer-took-dev`
+- **Execution Base SHA**: `44026faf294e378207f231e2ced5832847e352be`
+- **Deliverables Completed & Locked**:
+  - `A-01`: Verified Ace model integrity preserving all 128 `BasePart` instances in `assets/rojo/HeroModels/Ace.rbxmx` with 6-joint semantic rig (`RootJoint`, `Neck`, `RightShoulder`, `LeftShoulder`, `RightHip`, `LeftHip`), spatial clustering in `AnimationController.luau` parenting CowboyHat to `Head` (moving synchronously with pitch/yaw head rotations), RedBeads and Dagger rigid-welded to `Torso`, and dynamic injection of semantic flame attachments (`RightHandFlameAtt`, `LeftHandFlameAtt`, `OverheadEnteiAtt`).
+  - `A-02`: Created Ace Flame Emperor Signature Animation Profile in `src/Track2_TowerSystem/Animations/Ace.luau` implementing 9 animation states (8 standard: `Idle` Logia Flame Finger, `SpecialIdle` Cowboy Hat Tip, `Spawn` Fire Pillar Materialize, `Windup` Mera Mera Fire Charge, `Attack` Hiken Fire Fist, `Impact` Detonation Recoil, `Recovery` Flame Dissolve Reset, `Ultimate` Dai Enkai: Entei + 1 state: `EnteiSunballHold`), 6 profile aliases (`Ace`, `Hero_Ace`, `Tower_Ace`, `Ace_FlameEmperor`, `Ace_FireFist`, `Ace_Default`), locked 0.31s nominal combat impact timing (`0.14s + 0.10s + 0.07s`), and rest-pose restitution error `delta = 0.000000 < 0.001`.
+  - `A-03`: Created Ace Flame Emperor Signature VFX Module in `src/Track2_TowerSystem/VFX/AceVFX.luau` implementing 8 VFX cues (`PassiveAura`, `SpecialIdleCue`, `SpawnDeploy`, `AttackWindup`, `AttackRelease`, `AttackImpact`, `UltimateCast`, `UltimateImpact`), quality preset throttling (`Low`, `Medium`, `High`), layer toggles (`enableParticles`, `enableAura`, `enableTrailOrBeam`, `enableImpactEffect`, `enableCameraShake`, `enableScreenFlash`), intensity scaling (0.1x..2.0x), dual-layer Entei colossal sunball (`InnerCore` + `OuterCorona` positioned directly above raised right arm), and 100% Resource Ledger registration with full cleanup upon completion or model destruction.
+  - `A-04`: Created comprehensive automated verification suite in `tests/characters/ace_anim_vfx.spec.luau` (33 assertions) independently verifying all 9 animation states, CowboyHat angular tracking to `Head` (`delta < 0.0001`), OverheadEnteiAtt world offset alignment with raised right arm, rest-pose restoration (`delta < 0.001`), quality scaling particle rate/part caps, mid-animation interrupt safety, and zero memory leaks (100% ledger cleanup).
+- **Verification Evidence**:
+  - `node tests/run_all_tests.mjs`: 44 / 44 PASSED (100.0%)
+  - `node tests/combat_oracle_verification.test.mjs`: 22 / 22 PASSED (100.0%)
+  - `node tests/phase5_core_and_lab.test.mjs`: 82 / 82 PASSED (100.0%)
+  - `lune run tests/phase5_core_and_lab.spec`: 21 / 21 PASSED (100.0%)
+  - `lune run tests/characters/luffy_anim_vfx.spec`: 29 / 29 PASSED (100.0%)
+  - `lune run tests/characters/zoro_anim_vfx.spec`: 31 / 31 PASSED (100.0%)
+  - `lune run tests/characters/ace_anim_vfx.spec`: 33 / 33 PASSED (100.0%)
+  - `rojo sourcemap default.project.json`: Exit code 0 (JSON valid)
+  - Internal Gate Status: PASS (worker_m4_1, reviewer_m4_1, reviewer_m4_2, challenger_m4_1, challenger_m4_2, auditor_m4_1 all APPROVED/CLEAN)
