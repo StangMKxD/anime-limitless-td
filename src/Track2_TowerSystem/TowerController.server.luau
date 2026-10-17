@@ -44,6 +44,7 @@ end
 local SummonRerollRemote = getOrCreateRemote(GameConfig.REMOTES.TOWER_SUMMON_REROLL)
 local PlacementActionRemote = getOrCreateRemote(GameConfig.REMOTES.TOWER_PLACEMENT_ACTION)
 local CameraShakeRemote = getOrCreateRemote(GameConfig.REMOTES.VFX_CAMERA_SHAKE)
+local TowerPresentationRemote = getOrCreateRemote("TowerPresentationEvent")
 
 -- =============================================================================
 -- WORKSPACE CONTAINERS (ZERO INITIAL TOWERS CONTRACT)
@@ -2519,6 +2520,25 @@ task.spawn(function()
 					if nearestEnemy and nearestEnemy.PrimaryPart then
 						lastAttackTime[tower] = now
 						local impactPos = nearestEnemy.PrimaryPart.Position
+
+						-- Broadcast cosmetic presentation event to all clients (decoupled from server damage authority)
+						pcall(function()
+							if TowerPresentationRemote and tower.PrimaryPart then
+								local attackId = tostring(tower:GetAttribute("UnitUid") or tower.Name) .. "_" .. tostring(os.clock()) .. "_" .. tostring(math.random(1000, 9999))
+								TowerPresentationRemote:FireAllClients({
+									version = 1,
+									attackId = attackId,
+									unitUid = tostring(tower:GetAttribute("UnitUid") or tower.Name),
+									heroId = spec.Id,
+									startedAtServerTime = os.clock(),
+									impactAtServerTime = os.clock() + 0.31,
+									logicalOriginCFrame = tower.PrimaryPart.CFrame,
+									targetPositionSnapshot = impactPos,
+									visualSeed = math.random(1, 1000000),
+									presentationRevision = 1,
+								})
+							end
+						end)
 
 						-- 5-Phase Attack Choreography with Hitstop & Impact VFX
 						execute5PhaseAttack(tower, spec, impactPos, function()

@@ -10,6 +10,12 @@ local Workspace = game:GetService("Workspace")
 
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig")) :: any
+local MapCatalog = require(SharedFolder:WaitForChild("MapCatalog")) :: any
+
+local MapsFolder = script.Parent:FindFirstChild("Maps")
+local MapService = MapsFolder and require(MapsFolder:WaitForChild("MapService")) :: any or nil
+local MapSelectionService = MapsFolder and require(MapsFolder:WaitForChild("MapSelectionService")) :: any or nil
+
 
 local WAYPOINT_COORDS: { Vector3 } = {
 	Vector3.new(-65, 3, -42),
@@ -44,10 +50,22 @@ local ENEMY_TYPES: { [string]: EnemySpec } = {
 -- 1. เสกสมรภูมิ Marineford & Poneglyph Base อัตโนมัติ (Map Bootstrap)
 -- ============================================================================
 local function ensureMapAndWaypoints(): (Folder, Folder)
-	local mapFolder = Workspace:FindFirstChild(GameConfig.FOLDERS.MAP or "GrandLineMap") :: Folder?
+	local mapFolderName = GameConfig.FOLDERS.MAP or "GrandLineMap"
+	local wpFolderName = GameConfig.FOLDERS.WAYPOINTS or "Waypoints"
+	local mapFolder = Workspace:FindFirstChild(mapFolderName) :: Folder?
+	local wpFolder = Workspace:FindFirstChild(wpFolderName) :: Folder?
+
+	if MapService and (not mapFolder or not wpFolder or not MapService.IsMapReady()) then
+		pcall(function()
+			MapService.BuildMap(MapCatalog.DEFAULT_MAP_ID)
+		end)
+		mapFolder = Workspace:FindFirstChild(mapFolderName) :: Folder?
+		wpFolder = Workspace:FindFirstChild(wpFolderName) :: Folder?
+	end
+
 	if not mapFolder then
 		mapFolder = Instance.new("Folder")
-		mapFolder.Name = GameConfig.FOLDERS.MAP or "GrandLineMap"
+		mapFolder.Name = mapFolderName
 		mapFolder.Parent = Workspace
 
 		local ground = Instance.new("Part")
@@ -630,6 +648,11 @@ end
 -- 4. ลูปควบคุมเวฟ + ช่วงเตรียมตัว 15 วิ + รางวัลการ์ด & เหรียญสุ่มทุกเวฟ
 -- ============================================================================
 local function startWaveLoop(): ()
+	if MapSelectionService then
+		pcall(function()
+			MapSelectionService.Init()
+		end)
+	end
 	local _, _ = ensureMapAndWaypoints()
 	local enemiesFolder = Workspace:WaitForChild(GameConfig.FOLDERS.ENEMIES or "Enemies") :: Folder
 	local towersFolder = Workspace:WaitForChild(GameConfig.FOLDERS.TOWERS or "AnimeTowers") :: Folder
@@ -644,6 +667,12 @@ local function startWaveLoop(): ()
 		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN, 15)
 		Workspace:SetAttribute("EarlyStartTriggered", false)
 
+		if MapSelectionService then
+			pcall(function()
+				MapSelectionService.StartSelectionWindow(15)
+			end)
+		end
+
 		-- Phase 3 Preparation Phase: Wait up to 15s or until player summons & places their first tower
 		for prepSec = 15, 1, -1 do
 			local curPrep = (Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN) :: number?) or prepSec
@@ -651,6 +680,11 @@ local function startWaveLoop(): ()
 			if curPrep <= 0 or earlyTriggered then
 				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN, 0)
 				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.WAVE_STATUS, "HERO DEPLOYED! STARTING WAVE 1...")
+				if MapSelectionService then
+					pcall(function()
+						MapSelectionService.LockSelection()
+					end)
+				end
 				task.wait(1.5)
 				break
 			end
@@ -658,12 +692,22 @@ local function startWaveLoop(): ()
 			if #towersFolder:GetChildren() > 0 then
 				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN, 0)
 				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.WAVE_STATUS, "HERO DEPLOYED! STARTING WAVE 1...")
+				if MapSelectionService then
+					pcall(function()
+						MapSelectionService.LockSelection()
+					end)
+				end
 				task.wait(1.5)
 				break
 			end
 			if ((Workspace:GetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN) :: number?) or prepSec) <= 0 or (Workspace:GetAttribute("EarlyStartTriggered") :: boolean?) then
 				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN, 0)
 				Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.WAVE_STATUS, "HERO DEPLOYED! STARTING WAVE 1...")
+				if MapSelectionService then
+					pcall(function()
+						MapSelectionService.LockSelection()
+					end)
+				end
 				task.wait(1.5)
 				break
 			end
@@ -672,6 +716,11 @@ local function startWaveLoop(): ()
 				string.format("PREP PHASE (%ds): กดปุ่ม SUMMON กลางจอเพื่อสุ่มและวางตัวละคร!", prepSec)
 			)
 			task.wait(1)
+		end
+		if MapSelectionService then
+			pcall(function()
+				MapSelectionService.LockSelection()
+			end)
 		end
 		Workspace:SetAttribute(GameConfig.WORKSPACE_ATTRS.PREP_COUNTDOWN, 0)
 

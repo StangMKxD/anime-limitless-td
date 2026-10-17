@@ -118,3 +118,48 @@
 #### P5-R10: เกณฑ์การตรวจรับความปลอดภัย 13 ข้อ (Authoritative 13 Gates Barrier)
 - ทุกผลลัพธ์การตรวจสอบต้องจำแนกหมวดหมู่อย่างโปร่งใส 4 ประเภท (`StaticInspection`, `AutomatedTests`, `StudioRuntime`, `ManualVisual`)
 - รายการที่ไม่สามารถตรวจด้วยโค้ดอัตโนมัติหรือต้องสังเกตด้วยสายตาบน Roblox Studio GUI ต้องระบุสถานะตามจริงเป็น `NOT VERIFIED (Awaiting Interactive Studio GUI Inspection)` โดยห้ามประดิษฐ์ผลลัพธ์หรือทึกทักเอาเองตามกฎ R01
+
+### ส่วนขยายระยะที่ 6: การแยกชั้นการแสดงผลอิสระและระบบสมรภูมิ 4 ธีม (Phase 6 Neutral Presentation Runtime & Multi-Map System)
+
+#### P6-R01: โครงสร้างการแสดงผลแบบแยกส่วน (Neutral Presentation Runtime Architecture)
+- โมดูลการแสดงผลทั้งหมดถูกย้ายไปยังแพ็กเกจกลางที่เป็นกลาง `src/Presentation/` ซึ่งสามารถถูกเรียกใช้งานได้อย่างปลอดภัยทั้งจาก Client (`ClientPresentation`), Server (`TowerController`, `WaveManager`), และ Studio DevTools (`AnimationLab`)
+- การสื่อสารระหว่างเซิร์ฟเวอร์และไคลเอ็นต์ใช้เหตุการณ์ทางภาพแบบ Fire-and-Forget ผ่าน `TowerPresentationEvent` โดยเซิร์ฟเวอร์ยังคงเป็นผู้มีอำนาจสูงสุดในการคำนวณดาเมจและจังหวะเวลา (Server-authoritative damage timing at nominal 0.31s)
+- หากเกิดข้อผิดพลาดในการแสดงผล การปิดใช้งานการแสดงผล หรืออาการแล็กบนฝั่งไคลเอ็นต์ จะไม่มีผลกระทบต่อการคำนวณความเสียหาย คูลดาวน์ และการดำเนินคลื่นศัตรูบนเซิร์ฟเวอร์เด็ดขาด
+
+#### P6-R02: ระบบสมรภูมิ 4 ธีมและคงความสมดุล 100% (4 Themed Balanced Battlefields)
+- นำเสนอสมรภูมิรบ 4 รูปแบบ:
+  1. **Marineford**: ป้อมปราการทหารเรือ ลานหินแกรนิต Cobblestone และกำแพงหิน
+  2. **SakuraHarbor**: ท่าเรือดอกซากุระ ดาดฟ้าไม้ WoodPlanks โคมไฟ และกลีบซากุระ
+  3. **SkySanctuary**: วิหารเกาะลอยฟ้า หินอ่อน Marble เสากรีกโบราณ และก้อนเมฆ
+  4. **VolcanicCitadel**: ป้อมปราการภูเขาไฟ หินบะซอลต์ Basalt ลำธารลาวาเรืองแสง
+- ทุกแผนที่รักษากฎความสมดุลในการเล่นเท่าเทียมกัน 100%:
+  - Waypoints 6 จุด พิกัดคงที่ตรงตาม `BASELINE_WAYPOINTS` เดิมทุกประการ
+  - Placement Slots 8 จุด พิกัดคงที่ตรงตาม `BASELINE_SLOTS` เดิมทุกประการ
+  - อัลกอริทึมการเดินของศัตรูและการวางป้อมของผู้เล่นไม่เปลี่ยนแปลง
+
+#### P6-R03: ระบบโหวตเลือกแผนที่ก่อนเริ่มเวฟ (Pre-Wave Map Selection & Voting Engine)
+- ช่วงเวลาเตรียมตัวก่อน Wave 1 (15 วินาที) ผู้เล่นทุกคนสามารถลงคะแนนเลือกแผนที่ผ่าน `MapVoteRequest`
+- ระบบคำนวณคะแนนแบบเรียลไทม์ และกระจายสถานะผ่าน `MapSelectionState` พร้อมนับคะแนนและกำหนดแผนที่ที่คะแนนนำ
+- เมื่อหมดเวลาเตรียมตัว หรือเมื่อผู้เล่นวางยูนิตตัวแรกลงบนแผนที่ ระบบจะทำการล็อกผลโหวต (`LockSelection`) และสร้างสิ่งแวดล้อมแผนที่ผ่าน `MapService` ทันที กรณีคะแนนเสมอกันระบบจะเลือกแผนที่เริ่มต้น (Marineford) เป็นค่าสำรอง
+
+#### P6-R04: โปรไฟล์การโจมตีเชิงกระบวนการ 8 ฮีโร่หลัก (8 Playable Heroes Attack Motion Profiles)
+- บรรจุโปรไฟล์การโจมตีแบบ 5 เฟส (`Windup`, `Attack`, `Impact`, `Recovery`, `Idle/Reset`) ครบทั้ง 8 ฮีโร่ที่เล่นได้:
+  - `Luffy`: Joyboy Stance, Rubber Stretch, Hitstop
+  - `Zoro`: Santoryu Triple Blade Cross-Slash
+  - `Ace`: Mera Mera Hiken Flame Thrust
+  - `Shanks`: Kamusari Conqueror Dash
+  - `Whitebeard`: Gura Quake Slam
+  - `Law`: KRoom Injection
+  - `Kizaru`: Yata Mirror Ray
+  - `Sanji`: Diable/Ifrit Sky Kick
+  - `Default/Fallback`: ท่าโจมตีสำรองสำหรับยูนิตอื่นๆ
+
+#### P6-R05: การตั้งค่าฝั่งผู้เล่นและนโยบายคุณภาพ (Client Presentation Preferences & Quality Policy)
+- ผู้เล่นสามารถปรับแต่งการแสดงผลส่วนบุคคลผ่าน UI การตั้งค่า:
+  - Quality Preset: `Low` (ประหยัดทรัพยากร ปิดแสง ปิดบีม/เทรล), `Medium` (สมดุล), `High` (เต็มรูปแบบ)
+  - Camera Shake: `Off`, `Reduced`, `Full`
+  - Screen Flash: `Off`, `Reduced`, `Full`
+  - Decorative Aura: เปิด/ปิดออร่าตกแต่งรอบตัวละคร
+  - Reduced Motion: โหมดการเข้าถึงสำหรับผู้เล่นที่ไวต่อการสั่นไหว
+  - UI Scale: ปรับขนาดส่วนต่อประสานผู้ใช้ (0.75x - 1.50x)
+

@@ -37,3 +37,15 @@ Anime Limitless Tower Defense คือเกมแนว Tower Defense บน�
 - **Multi-Character Stress Benchmark**: การทดสอบความเค้นพร้อมกันของตัวละครจำนวนมาก (1, 10, 25, 50 ตัว) บนเวที Sandbox เพื่อวัดการใช้หน่วยความจำ ความเร็วในการประมวลผลต่อเฟรม และการไม่เกิดปัญหาข้อต่อพันกัน
 - **Zero-Leak Balance**: สถานะที่ตัวเลขการสร้างวัตถุ (`createdCount`) ลบด้วยตัวเลขการทำลายวัตถุ (`cleanedCount`) มีค่าเท่ากับ 0 พอดี โดยไม่หลงเหลือ Instance, Tween, หรือ Connection ใดๆ ตกค้างในหน่วยความจำ
 - **13 Gates Verification Barrier**: แผงด่านตรวจสอบคุณภาพ 13 มิติ ครอบคลุมตั้งแต่การรักษาโมเดลเดิม, ความถูกต้องของริก, แอนิเมชัน, เอฟเฟกต์, การแยกระบบรบ, การป้องกันหน่วยความจำรั่วไหล, และความเข้ากันได้ย้อนหลัง
+
+### หลักการออกแบบสถาปัตยกรรมเพิ่มเติมสำหรับระยะที่ 6 (Phase 6 Invariants)
+9. **Decoupled Visual Broadcast (การแพร่ภาพแสดงผลแบบแยกส่วนเด็ดขาด)**: การปล่อยอีเวนต์การแสดงผล เช่น `TowerPresentationRemote:FireAllClients(...)` ทำงานในรูปแบบ one-way notification จากเซิร์ฟเวอร์ โดยไม่มีการรอคอย (No yield) และไม่กระทบต่อ Damage Timer (0.31s nominal hit) หรือลำดับการคำนวณ Combat State ของเซิร์ฟเวอร์
+10. **Neutral Presentation Runtime (รันไทม์การแสดงผลระดับตัวกลาง)**: โมดูลใน `src/Presentation/` (`RigBinder`, `AnimationPlayback`, `VFXDispatcher`, `QualityPolicy`, `PresentationPreferences`, ฯลฯ) ทำหน้าที่เป็น Pure Procedural Engine ที่รองรับทั้งฝั่ง Client, Server และ DevTools โดยไม่มีการผูกมัดหรือครอบงำสิทธิของ `Track2` หรือทำลายความเป็นอิสระของ Tracks อื่น
+11. **Themed Map Gameplay Invariance (ความเสมอภาคของกลไกการเล่นบนแผนที่ธีม)**: แผนที่ทั้ง 4 ธีม (`Marineford`, `SakuraHarbor`, `SkySanctuary`, `VolcanicCitadel`) มีการกระจายตำแหน่ง `Waypoints` (ระยะทางรวมเท่ากันที่ ~250 studs) และจำนวน/ขนาดของ `PlacementSlots` (6 สล็อตมาตรฐาน) เท่าเทียมกัน 100% ทำให้ความยากและสมดุลของเกมเพลย์คงเดิมไม่เปลี่ยนแปลงตามธีม
+
+### นิยามศัพท์สำคัญเพิ่มเติมสำหรับระยะที่ 6 (Phase 6 Domain Glossary)
+- **Presentation Preferences**: ค่ากำหนดการแสดงผลฝั่งไคลเอนต์ (Animations, VFX, Camera Shake, Quality Preset) จัดเก็บเฉพาะเครื่องผู้เล่นและมีระบบ Event Subscription (`OnChange`)
+- **Quality Policy**: นโยบายจำกัดทรัพยากรการแสดงผลตามระดับ Low / Medium / High (Particle Cap, Max Lights, VFX Detail) แบบ Monotonic Guard
+- **Map Lifecycle State**: วงจรชีวิตของแผนที่ (`Voting`, `Building`, `Active`, `Teardown`) บริหารจัดการโดย `MapService` และ `MapSelectionService`
+- **Camera Priority Preemption**: ระบบแย่งสิทธิ์ควบคุมมุมกล้องตามระดับความสำคัญ (Gameplay = 10, AmbientCombat = 20, LobbyPreview = 50, UltimateCinematic = 80, AnimationLab = 100) ป้องกันไม่ให้แอนิเมชันมุมกล้องระดับต่ำมาแทรกแซงมุมกล้องสำคัญ
+

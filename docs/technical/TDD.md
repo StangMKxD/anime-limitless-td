@@ -211,3 +211,29 @@ flowchart TD
   - ระบบจัดวางโมเดลแบบตารางกริดบน Sandbox Stage (ระยะห่างระหว่างจุด 4.5 Studs)
   - วัด Frame Time จริง และคำนวณ P95 Frame Time ตลอดรอบการประมวลผล
   - สแกนโครงสร้าง Subtree จริงเปรียบเทียบกับ Resource Ledger ใน `VFXDispatcher` เพื่อยืนยันว่าไม่มี Instance หรือ Connection ตกค้าง
+
+## 5. การออกแบบเชิงเทคนิคระยะที่ 6: การแยกชั้นการแสดงผลและระบบหลายแผนที่ (Phase 6 Technical Architecture)
+
+### 5.1 สถาปัตยกรรม Presentation Runtime ที่เป็นกลาง (src/Presentation/)
+- **การแยกแพ็กเกจ**: รวมฟังก์ชันเชิงทัศนศิลป์ทั้งหมด (`RigBinder`, `RigDiagnostics`, `AttackMotionProfiles`, `AnimationPlayback`, `VFXDispatcher`, `EnemyPresentation`, `BossPresentation`, `PresentationPreferences`, `QualityPolicy`) ไว้ในโฟลเดอร์ที่เป็นกลางเพื่อความปลอดภัยในการโหลดแบบ Cross-Context
+- **Decoupled Combat Broadcast**:
+  - `TowerController.server.luau` ยิง `TowerPresentationEvent:FireAllClients(payload)` ณ จังหวะที่เริ่มการโจมตี
+  - ไคลเอ็นต์รับอีเวนต์และคำนวณการ Dash, ท่าทางแอนิเมชัน, และเอฟเฟกต์ภาพเฉพาะที่เครื่องตนเองตามการตั้งค่า `PresentationPreferences`
+  - เซิร์ฟเวอร์ยังคงรักษากฎอำนาจสิทธิ์ขาดในการทำดาเมจที่ 0.31s เสมอ
+
+### 5.2 การออกแบบแผนที่ 4 ธีมและคงความสมดุล 100% (Map Invariance Architecture)
+```mermaid
+flowchart TD
+    Catalog["MapCatalog.luau (Immutable Definitions)"] --> Svc["MapService.luau (Authoritative Builder)"]
+    Select["MapSelectionService.luau (Voting Engine)"] --> Svc
+    Svc --> B1["Builders/Marineford.luau"]
+    Svc --> B2["Builders/SakuraHarbor.luau"]
+    Svc --> B3["Builders/SkySanctuary.luau"]
+    Svc --> B4["Builders/VolcanicCitadel.luau"]
+    Svc --> WP["Workspace.Waypoints (Exact 6 Points)"]
+    Svc --> SL["Workspace.GrandLineMap (Exact 8 Pads)"]
+```
+- **Waypoint & Placement Equivalence**:
+  - ทุกธีมใช้พิกัดจุดเลี้ยวทั้ง 6 จุด (`BASELINE_WAYPOINTS`) และจุดวางป้อมทั้ง 8 จุด (`BASELINE_SLOTS`) ที่มีค่าตำแหน่งทางฟิสิกส์เหมือนกัน 100%
+  - ช่วยให้การสร้างแผนที่ใหม่กระทบเฉพาะโครงสร้างตกแต่ง (Mesh, Part, Decal, Lighting) โดยไม่กระทบต่อความเร็ว ทิศทาง และระยะการยิงของป้อม
+

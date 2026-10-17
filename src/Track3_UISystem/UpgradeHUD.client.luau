@@ -17,6 +17,10 @@ local playerGui = localPlayer:WaitForChild("PlayerGui")
 local SharedFolder = ReplicatedStorage:WaitForChild("Shared")
 local GameConfig = require(SharedFolder:WaitForChild("GameConfig")) :: any
 
+local ViewsFolder = script.Parent:FindFirstChild("Views")
+local MapSelectionView = if ViewsFolder and ViewsFolder:FindFirstChild("MapSelectionView") then require(ViewsFolder:FindFirstChild("MapSelectionView")) else nil
+local LobbyHubView = if ViewsFolder and ViewsFolder:FindFirstChild("LobbyHubView") then require(ViewsFolder:FindFirstChild("LobbyHubView")) else nil
+
 -- =============================================================================
 -- STRICT TYPE DEFINITIONS
 -- =============================================================================
@@ -389,6 +393,33 @@ else
 	end)
 end
 
+local feedbackPort = playerGui:FindFirstChild("PresentationFeedback") :: BindableEvent?
+if not feedbackPort then
+	local be = Instance.new("BindableEvent")
+	be.Name = "PresentationFeedback"
+	be.Parent = playerGui
+	feedbackPort = be
+end
+
+feedbackPort.Event:Connect(function(action: string, payload: any)
+	if action == "Shake" then
+		local intensity = payload and payload.intensity or 0.45
+		local dur = payload and payload.duration or 0.25
+		local prof = payload and payload.profile or "Explosive"
+		local col = payload and payload.color or Color3.fromRGB(255, 255, 255)
+		onCameraShakeReceived({
+			Intensity = intensity,
+			Duration = dur,
+			ShakeProfile = prof,
+			Color = col,
+		})
+	elseif action == "Flash" then
+		local col = payload and payload.color or Color3.fromRGB(255, 255, 255)
+		local dur = payload and payload.duration or 0.25
+		triggerScreenFlash(col, dur)
+	end
+end)
+
 ---- =============================================================================
 -- SUBSYSTEM 2: TOP STATUS PILL & EARLY WAVE START BUTTON (PLAN-0009)
 -- =============================================================================
@@ -456,11 +487,11 @@ end)
 -- SUBSYSTEM 3: COLLAPSIBLE MINI ACTION TOGGLES & STAT UPGRADE DRAWER (PLAN-0009)
 -- =============================================================================
 
--- Mini Action Toggles Container (100x64 px at bottom-left)
+-- Mini Action Toggles Container (100x98 px at bottom-left)
 local miniActionToggles = Instance.new("Frame")
 miniActionToggles.Name = "MiniActionToggles"
-miniActionToggles.Size = UDim2.new(0, 100, 0, 64)
-miniActionToggles.Position = UDim2.new(0, 10, 1, -128)
+miniActionToggles.Size = UDim2.new(0, 100, 0, 98)
+miniActionToggles.Position = UDim2.new(0, 10, 1, -162)
 miniActionToggles.BackgroundTransparency = 1
 miniActionToggles.Parent = screenGui
 
@@ -505,6 +536,35 @@ local gStroke = Instance.new("UIStroke")
 gStroke.Color = Color3.fromRGB(90, 80, 50)
 gStroke.Thickness = 1
 gStroke.Parent = toggleGachaBtn
+
+local mapSelectionModal: Frame? = if MapSelectionView then MapSelectionView.Create(screenGui) else nil
+
+local toggleMapBtn = Instance.new("TextButton")
+toggleMapBtn.Name = "ToggleMapBtn"
+toggleMapBtn.Size = UDim2.new(1, 0, 0, 28)
+toggleMapBtn.Position = UDim2.new(0, 0, 0, 68)
+toggleMapBtn.BackgroundColor3 = UI_THEME.BgDark
+toggleMapBtn.BackgroundTransparency = 0.2
+toggleMapBtn.Font = Enum.Font.GothamBold
+toggleMapBtn.TextSize = 11
+toggleMapBtn.TextColor3 = Color3.fromRGB(120, 200, 255)
+toggleMapBtn.Text = "🗺 MAP"
+toggleMapBtn.Parent = miniActionToggles
+
+local mMapCorner = Instance.new("UICorner")
+mMapCorner.CornerRadius = UDim.new(0, 6)
+mMapCorner.Parent = toggleMapBtn
+
+local mMapStroke = Instance.new("UIStroke")
+mMapStroke.Color = Color3.fromRGB(60, 95, 140)
+mMapStroke.Thickness = 1
+mMapStroke.Parent = toggleMapBtn
+
+toggleMapBtn.MouseButton1Click:Connect(function()
+	if mapSelectionModal then
+		mapSelectionModal.Visible = not mapSelectionModal.Visible
+	end
+end)
 
 -- Collapsible Upgrade Shop Drawer (210x185 px at bottom-left, hidden by default)
 local upgradePanel = Instance.new("Frame")

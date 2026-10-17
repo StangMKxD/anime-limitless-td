@@ -219,3 +219,57 @@ export type TelemetrySnapshot = {
 | `Chars10` | 10 | 1,600 | 200 | 16.67ms (60 FPS) | 0 |
 | `Chars25` | 25 | 3,800 | 400 | 20.00ms (>= 50 FPS) | 0 |
 | `Chars50` | 50 | 7,500 | 600 | 25.00ms (>= 40 FPS) | 0 |
+
+---
+
+## 7. สัญญาการแสดงผลและระบบหลายแผนที่ (Presentation & Map System API)
+
+### 7.1 Presentation Contract (`src/Shared/PresentationContract.luau`)
+- **RemoteEvent**: `TowerPresentationEvent` (Server -> Client)
+```luau
+export type AttackPresentationPayload = {
+    version: number,
+    attackId: string,
+    unitUid: string,
+    heroId: string,
+    startedAtServerTime: number,
+    impactAtServerTime: number,
+    logicalOriginCFrame: CFrame,
+    targetPositionSnapshot: Vector3,
+    visualSeed: number,
+    presentationRevision: number,
+}
+```
+- **BindableEvent**: `PlayerGui.PresentationFeedback` (Client Internal Feedback Sink)
+  - รองรับ Actions: `Shake` (Camera Shake), `Flash` (Screen Flash), `AcquireCamera`, `ReleaseCamera`
+
+### 7.2 Map Contract & Voting API (`src/Shared/MapContract.luau`)
+- **RemoteEvent**: `MapSelectionState` (Server -> Client Broadcast)
+```luau
+export type MapSelectionState = {
+    version: number,
+    selectionRevision: number,
+    lifecycleState: "PreparationSelection" | "Locked" | "Loading" | "Ready" | "Playing" | "Results",
+    selectedMapId: string,
+    lockedMapId: string?,
+    allowedMapIds: { string },
+    votes: { [string]: number },
+    deadlineServerTime: number,
+}
+```
+- **RemoteEvent**: `MapVoteRequest` (Client -> Server)
+```luau
+export type MapVoteRequest = {
+    version: number,
+    mapId: string,
+    selectionRevision: number,
+    requestId: string,
+}
+```
+
+### 7.3 Client Preferences API (`src/Presentation/PresentationPreferences.luau`)
+- `PresentationPreferences.GetSnapshot(): PreferencesSnapshot`
+- `PresentationPreferences.SetLocal(key: string, value: any): (boolean, string?)`
+- `PresentationPreferences.ResetLocal(): ()`
+- `PresentationPreferences.Subscribe(listener: (PreferencesSnapshot) -> ()): Connection`
+

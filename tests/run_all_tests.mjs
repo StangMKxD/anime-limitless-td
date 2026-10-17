@@ -953,6 +953,11 @@ export async function runAllTests() {
         name: "Phase 5 Stress & Performance Benchmark Suite (Task P5-22)",
         candidates: ["tests/phase5_stress_benchmark.spec.luau"],
       },
+      {
+        id: "LUNE-6.1",
+        name: "Phase 6 Presentation Runtime & Multi-Map Verification Spec (Sub-phases P01-P09)",
+        candidates: ["tests/phase6_presentation_and_maps.spec.luau"],
+      },
     ];
 
     for (const spec of luneSpecs) {
