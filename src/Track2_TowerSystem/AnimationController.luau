@@ -155,6 +155,23 @@ local function getOrCreateAttachment(
 	return att
 end
 
+local function getOrCreatePartAttachment(
+	parent: BasePart,
+	name: string,
+	offset: CFrame
+): Attachment
+	local existing = parent:FindFirstChild(name)
+	if existing and existing:IsA("Attachment") then
+		return existing
+	end
+
+	local att = Instance.new("Attachment")
+	att.Name = name
+	att.CFrame = offset
+	att.Parent = parent
+	return att
+end
+
 -- =============================================================================
 -- 2. RIG SANITIZATION & ASSEMBLY (P5-08)
 -- =============================================================================
@@ -250,17 +267,20 @@ function AnimationController.SanitizeAndRigModel(
 
 	-- 3. Build Weapon Rig if applicable (Zoro / Weapon Profile)
 	local isWeaponRig = (customProfile and customProfile.rigType == "ArticulatedWeaponRig") or string.find(model.Name, "Zoro", 1, true) ~= nil
+	local weaponR: BasePart? = nil
+	local weaponL: BasePart? = nil
+	local weaponM: BasePart? = nil
 	if isWeaponRig then
-		local weaponR = getOrCreateSemanticAnchor(model, "SignatureWeapon", Vector3.new(0.5, 3.0, 0.5), rightArm.CFrame * CFrame.new(0.24, -1.66, -0.50))
-		local weaponL = getOrCreateSemanticAnchor(model, "LeftWeapon", Vector3.new(0.5, 3.0, 0.5), leftArm.CFrame * CFrame.new(-0.24, -1.66, -0.50))
-		local weaponM = getOrCreateSemanticAnchor(model, "MouthWeapon", Vector3.new(0.5, 3.0, 0.5), head.CFrame * CFrame.new(0, -0.25, -0.55))
+		weaponR = getOrCreateSemanticAnchor(model, "SignatureWeapon", Vector3.new(0.5, 3.0, 0.5), rightArm.CFrame * CFrame.new(0.24, -1.66, -0.50))
+		weaponL = getOrCreateSemanticAnchor(model, "LeftWeapon", Vector3.new(0.5, 3.0, 0.5), leftArm.CFrame * CFrame.new(-0.24, -1.66, -0.50))
+		weaponM = getOrCreateSemanticAnchor(model, "MouthWeapon", Vector3.new(0.5, 3.0, 0.5), head.CFrame * CFrame.new(0, -0.25, -0.55))
 
 		motors.WeaponRight = getOrCreateMotor6D(rightArm, "WeaponRight", rightArm, weaponR, CFrame.new(0.24, -1.66, -0.50), CFrame.identity)
 		motors.WeaponLeft = getOrCreateMotor6D(leftArm, "WeaponLeft", leftArm, weaponL, CFrame.new(-0.24, -1.66, -0.50), CFrame.identity)
 		motors.WeaponMouth = getOrCreateMotor6D(head, "WeaponMouth", head, weaponM, CFrame.new(0, -0.25, -0.55), CFrame.identity)
 	end
 
-	-- 3.5 Dynamic Semantic Attachment Injection (Task L-01)
+	-- 3.5 Dynamic Semantic Attachment Injection (Tasks L-01 & Z-01)
 	getOrCreateAttachment(model, root, "RootAttachment", CFrame.new(0, -1.0, 0))
 	local rightFist = model:FindFirstChild("Fist_2") :: BasePart? or rightArm
 	getOrCreateAttachment(model, rightFist, "RightArmAttachment", CFrame.new(0, -0.28, 0))
@@ -269,6 +289,41 @@ function AnimationController.SanitizeAndRigModel(
 	getOrCreateAttachment(model, head, "HeadAttachment", CFrame.new(0, 0.77, 0))
 	getOrCreateAttachment(model, torso, "HakiCloudAttachment", CFrame.new(0, 2.40, 0.62))
 	getOrCreateAttachment(model, torso, "BajrangAnchorAttachment", CFrame.new(0, 5.50, -1.20))
+
+	-- Zoro Semantic Attachments (Task Z-01)
+	getOrCreateAttachment(model, rightFist, "RightSwordAttachment", CFrame.new(-0.126, -0.269, -0.014))
+	getOrCreateAttachment(model, leftFist, "LeftSwordAttachment", CFrame.new(0.126, -0.269, -0.014))
+	getOrCreateAttachment(model, head, "MouthSwordAttachment", CFrame.new(0, -0.293, -0.883))
+	getOrCreateAttachment(model, rightArm, "EnmaAuraAttachment", CFrame.new(1.382, 0.772, -1.484))
+	getOrCreateAttachment(model, torso, "KingOfHellAttachment", CFrame.new(0, 0.20, -0.40))
+
+	-- Blade Trail Attachments for 3 Swords (Task Z-01)
+	local wadoGuard = model:FindFirstChild("WadoIchimonji_TsubaGuard") :: BasePart?
+	if wadoGuard then
+		getOrCreatePartAttachment(wadoGuard, "BladeBase", CFrame.identity)
+	end
+	local wadoTip = model:FindFirstChild("WadoIchimonji_Blade_Seg4") :: BasePart?
+	if wadoTip then
+		getOrCreatePartAttachment(wadoTip, "BladeTip", CFrame.new(0, 0.315, 0))
+	end
+
+	local enmaGuard = model:FindFirstChild("Enma_TsubaGuard") :: BasePart?
+	if enmaGuard then
+		getOrCreatePartAttachment(enmaGuard, "BladeBase", CFrame.identity)
+	end
+	local enmaTip = model:FindFirstChild("Enma_Blade_Seg4") :: BasePart?
+	if enmaTip then
+		getOrCreatePartAttachment(enmaTip, "BladeTip", CFrame.new(0, 0.408, 0))
+	end
+
+	local sandaiGuard = model:FindFirstChild("SandaiKitetsu_TsubaGuard") :: BasePart?
+	if sandaiGuard then
+		getOrCreatePartAttachment(sandaiGuard, "BladeBase", CFrame.identity)
+	end
+	local sandaiTip = model:FindFirstChild("SandaiKitetsu_Blade_Seg4") :: BasePart?
+	if sandaiTip then
+		getOrCreatePartAttachment(sandaiTip, "BladeTip", CFrame.new(0, 0.408, 0))
+	end
 
 	-- 4. Dynamic Accessory & Sub-part Clustering (Anti-Lock Rigid Weld Protocol)
 	local limbCounts: { [string]: number } = {
@@ -290,6 +345,12 @@ function AnimationController.SanitizeAndRigModel(
 		[rightLeg] = true,
 		[leftLeg] = true,
 	}
+	if weaponR then semanticParts[weaponR] = true end
+	if weaponL then semanticParts[weaponL] = true end
+	if weaponM then semanticParts[weaponM] = true end
+	if motors.WeaponRight and motors.WeaponRight.Part1 then semanticParts[motors.WeaponRight.Part1] = true end
+	if motors.WeaponLeft and motors.WeaponLeft.Part1 then semanticParts[motors.WeaponLeft.Part1] = true end
+	if motors.WeaponMouth and motors.WeaponMouth.Part1 then semanticParts[motors.WeaponMouth.Part1] = true end
 
 	local conflictingWeldsList: { string } = {}
 
@@ -305,6 +366,19 @@ function AnimationController.SanitizeAndRigModel(
 				limbCounts.Torso += 1
 			elseif string.find(pName, "StrawWeave") or string.find(pName, "StrawHat") then
 				targetLimb = torso
+				limbCounts.Torso += 1
+
+			-- 1.5 Zoro Torso Accessories & Scabbards (Task Z-01)
+			elseif string.find(pName, "Scabbard") or string.find(pName, "Sheath")
+				or string.find(pName, "Haramaki") or string.find(pName, "PurpleObiSash")
+				or string.find(pName, "GreenCoatSkirt") or string.find(pName, "PelvisBelt")
+				or string.find(pName, "BareChest") then
+				targetLimb = torso
+				limbCounts.Torso += 1
+
+			-- 1.6 Zoro Floor / Ground Aura Parts (Task Z-01: bind to root so they stay horizontal on floor)
+			elseif string.find(pName, "HakiGround") or string.find(pName, "AuraBurst") or string.find(pName, "HakiLightning") then
+				targetLimb = root
 				limbCounts.Torso += 1
 
 			-- 2. Explicit Arm overrides: Haki glow, knuckles, shoulder caps (Spatial X routing)
@@ -327,7 +401,8 @@ function AnimationController.SanitizeAndRigModel(
 				or string.find(pName, "Jaw") or string.find(pName, "Teeth")
 				or (string.find(pName, "Scar") and not string.find(pName, "Chest"))
 				or string.find(pName, "Bandana") or string.find(pName, "Antler")
-				or (string.find(pName, "Cap") and not string.find(pName, "Shoulder")) then
+				or (string.find(pName, "Cap") and not string.find(pName, "Shoulder"))
+				or string.find(pName, "Spike") or string.find(pName, "Smirk") or string.find(pName, "Bevel") then
 				targetLimb = head
 				limbCounts.Head += 1
 
@@ -350,9 +425,24 @@ function AnimationController.SanitizeAndRigModel(
 				targetLimb = leftLeg
 				limbCounts.LeftLeg += 1
 
-			-- 6. Weapon Limbs
-			elseif string.find(pName, "Wado") or string.find(pName, "Enma") or string.find(pName, "Sandai") or string.find(pName, "Sword") or string.find(pName, "Blade") or string.find(pName, "Hilt") or string.find(pName, "Scabbard") then
-				targetLimb = rightArm
+			-- 6. Weapon Limbs (Task Z-01: Disambiguate Wado, Enma, Sandai, Swords)
+			elseif string.find(pName, "Wado") or string.find(pName, "MouthSword") then
+				targetLimb = weaponM or head
+				limbCounts.Weapons += 1
+			elseif string.find(pName, "Enma") or string.find(pName, "Sandai") or string.find(pName, "Sword")
+				or string.find(pName, "Blade") or string.find(pName, "Hilt") or string.find(pName, "Tsuba")
+				or string.find(pName, "Pommel") or string.find(pName, "Handle") then
+				-- Taking into account negative/positive X geometry:
+				-- In Zoro.rbxmx: SandaiKitetsu is at X > 0 (right hand), Enma is at X < 0 (left hand)
+				if relX > 0.2 then
+					targetLimb = weaponR or rightArm
+				elseif relX < -0.2 then
+					targetLimb = weaponL or leftArm
+				elseif string.find(pName, "Sandai") or string.find(pName, "Left") then
+					targetLimb = weaponL or leftArm
+				else
+					targetLimb = weaponR or rightArm
+				end
 				limbCounts.Weapons += 1
 
 			-- 7. Torso default
