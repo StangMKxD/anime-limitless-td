@@ -121,3 +121,24 @@ Static file/XML/Git: inspected ตามรายการข้างต้น;
   - `lune run tests/characters/luffy_anim_vfx.spec`: 29 / 29 PASSED (100.0%)
   - `rojo sourcemap default.project.json`: Exit code 0 (JSON valid)
   - Internal Gate Status: PASS (worker_m2_1, reviewer_m2_1, reviewer_m2_2, challenger_m2_1, challenger_m2_2, auditor_m2_1 all APPROVED/CLEAN)
+
+
+## Milestone M3 Completion Notes (`Z-01`..`Z-04`)
+
+- **Status**: [READY_FOR_REVIEW] (Internal Gate: PASS)
+- **Active Branch**: `phase5/implementer-took-dev`
+- **Execution Base SHA**: `44026faf294e378207f231e2ced5832847e352be`
+- **Deliverables Completed & Locked**:
+  - `Z-01`: Verified Zoro model integrity preserving all 139 `BasePart` instances in `assets/rojo/HeroModels/Zoro.rbxmx` with 9-joint semantic rig (`RootJoint`, `Neck`, `RightShoulder`, `LeftShoulder`, `RightHip`, `LeftHip`, `WeaponRight`, `WeaponLeft`, `WeaponMouth`), refined spatial clustering heuristics in `AnimationController.luau` (`Wado` to `weaponM`/head, `HipScabbards` to torso, negative X `Enma` and positive X `SandaiKitetsu` to respective weapon anchors), and dynamic injection of 6 semantic attachments (`RootAttachment`, `RightSwordAttachment`, `LeftSwordAttachment`, `MouthSwordAttachment`, `EnmaAuraAttachment`, `KingOfHellAttachment`) plus 6 blade trail attachments (`BladeBase`, `BladeTip` on each sword).
+  - `Z-02`: Created Zoro King of Hell Signature Animation Profile in `src/Track2_TowerSystem/Animations/Zoro.luau` implementing all 8 standard states (`Idle` Santoryu Guard Stance, `SpecialIdle` Enma Haki Tame, `Spawn` Three-Sword Unsheathe, `Windup` Oni Giri Cross-Arm Stance, `Attack` King of Hell Dash Cross-Slash, `Impact` Triple Blade Sever Pose, `Recovery` Blade Flourish & Reset, and `Ultimate` King of Hell: 103 Mercies Dragon Damnation) with 3-sword synchronized kinematics, nominal 0.31s combat hit timing (`0.14s + 0.10s + 0.07s`), and rest-pose restoration error `delta = 0.000000 < 0.001`.
+  - `Z-03`: Created Zoro King of Hell Signature VFX Module in `src/Track2_TowerSystem/VFX/ZoroVFX.luau` featuring emerald flame and purple aura particles, synchronized 3-sword trails (`Three-Sword Trails`) with mandatory disabling (`Trail.Enabled = false`) upon attack end/cancel/cleanup, crescent slash arcs, dragon damnation vortex, quality preset scaling (`Low`, `Medium`, `High`), layer toggles, and strict resource ledger tracking with 100% cleanup upon reset or model destruction.
+  - `Z-04`: Created comprehensive automated verification suite `tests/characters/zoro_anim_vfx.spec.luau` verifying all 8 animation states, 3-sword world CFrame kinematic tracking, rest-pose restoration (`delta < 0.001`), trail suppression on stop/reset, VFX ledger registration, quality scaling, mid-animation interrupt safety, and zero memory leaks.
+- **Verification Evidence**:
+  - `node tests/run_all_tests.mjs`: 44 / 44 PASSED (100.0%)
+  - `node tests/combat_oracle_verification.test.mjs`: 22 / 22 PASSED (100.0%)
+  - `node tests/phase5_core_and_lab.test.mjs`: 82 / 82 PASSED (100.0%)
+  - `lune run tests/phase5_core_and_lab.spec`: 21 / 21 PASSED (100.0%)
+  - `lune run tests/characters/luffy_anim_vfx.spec`: 29 / 29 PASSED (100.0%)
+  - `lune run tests/characters/zoro_anim_vfx.spec`: 31 / 31 PASSED (100.0%)
+  - `rojo sourcemap default.project.json`: Exit code 0 (JSON valid)
+  - Internal Gate Status: PASS (worker_m3_1, reviewer_m3_1, reviewer_m3_2, challenger_m3_1, challenger_m3_2, auditor_m3_1 all APPROVED/CLEAN)
